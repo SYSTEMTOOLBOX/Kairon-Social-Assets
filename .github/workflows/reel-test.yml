@@ -3,11 +3,78 @@ name: Kairon Reel Test
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   publish-reel:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Scarica repository
+        uses: actions/checkout@v4
+
+      - name: Installa FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Crea Reel verticale senza tagliare la foto
+        run: |
+          mkdir -p generated
+
+          ffmpeg -y \
+            -loop 1 \
+            -i kairon-webapp-test-1.jpg \
+            -f lavfi \
+            -i anullsrc=r=48000:cl=stereo \
+            -filter_complex "
+              [0:v]split=2[bg][fg];
+              [bg]scale=1080:1920:force_original_aspect_ratio=increase,
+                  crop=1080:1920,
+                  boxblur=30:20,
+                  eq=brightness=-0.20[background];
+              [fg]scale=1000:1760:force_original_aspect_ratio=decrease[foreground];
+              [background][foreground]overlay=(W-w)/2:(H-h)/2,
+                  format=yuv420p[video]
+            " \
+            -map "[video]" \
+            -map 1:a \
+            -t 8 \
+            -r 30 \
+            -c:v libx264 \
+            -preset medium \
+            -crf 20 \
+            -c:a aac \
+            -b:a 128k \
+            -movflags +faststart \
+            generated/reel-test.mp4
+
+      - name: Aggiorna MP4 pubblico
+        run: |
+          git config user.name "Kairon Auto Social"
+          git config user.email "kaironlabsstudio@gmail.com"
+
+          git add generated/reel-test.mp4
+          git commit -m "Update vertical Instagram Reel" || true
+          git push
+
+      - name: Attendi video pubblico
+        run: |
+          VIDEO_URL="https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/main/generated/reel-test.mp4"
+
+          for i in {1..15}; do
+            if curl -fL --silent --output /dev/null "$VIDEO_URL"; then
+              echo "Video disponibile."
+              exit 0
+            fi
+
+            echo "Attendo..."
+            sleep 10
+          done
+
+          exit 1
+
       - name: Pubblica Reel Instagram
         env:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
@@ -16,17 +83,11 @@ jobs:
         run: |
           set -e
 
-          echo "Recupero account Instagram..."
-
           PROFILE=$(curl --silent --show-error \
             -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
             "https://graph.instagram.com/me?fields=id,username")
 
           IG_USER_ID=$(echo "$PROFILE" | jq -r '.id')
-          USERNAME=$(echo "$PROFILE" | jq -r '.username')
-
-          echo "Account: @$USERNAME"
-          echo "Creo il Reel..."
 
           CREATE=$(curl --silent --show-error \
             -X POST \
@@ -42,11 +103,9 @@ jobs:
           CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
 
           if [ -z "$CREATION_ID" ]; then
-            echo "Instagram non ha creato il contenitore Reel."
+            echo "Errore creazione Reel."
             exit 1
           fi
-
-          echo "Contenitore creato: $CREATION_ID"
 
           for i in {1..20}; do
             STATUS_JSON=$(curl --silent --show-error \
@@ -55,21 +114,19 @@ jobs:
 
             STATUS=$(echo "$STATUS_JSON" | jq -r '.status_code // empty')
 
-            echo "Stato Instagram: $STATUS"
+            echo "Stato: $STATUS"
 
             if [ "$STATUS" = "FINISHED" ]; then
               break
             fi
 
-            if [ "$STATUS" = "ERROR" ]; then
+            if [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "EXPIRED" ]; then
               echo "$STATUS_JSON"
               exit 1
             fi
 
             sleep 15
           done
-
-          echo "Pubblico il Reel..."
 
           PUBLISH=$(curl --silent --show-error \
             -X POST \
