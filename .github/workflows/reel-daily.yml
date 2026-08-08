@@ -2,6 +2,10 @@ name: Kairon Daily Reel
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/reel-daily.yml'
   schedule:
     - cron: '0 19 * * *'
       timezone: 'Europe/Rome'
@@ -28,39 +32,51 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg unzip
 
-      - name: Estrai i 30 JPEG e scegli il prossimo
+      - name: Scegli prossimo JPEG valido
         id: choose
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
           ZIP1="Kairon_Batch_01_JPEG.zip"
-          ZIP2="Kairon_Batch_02_JPEG_1786171801.zip"
           ZIP3="Kairon_Batch_03_JPEG_1786173983.zip"
-
-          for f in "$ZIP1" "$ZIP2" "$ZIP3"; do
-            if [ ! -f "$f" ]; then
-              echo "Manca il file: $f"
-              exit 1
-            fi
-          done
-
-          PACK_HASH=$(sha256sum "$ZIP1" "$ZIP2" "$ZIP3" | sha256sum | awk '{print $1}')
 
           mkdir -p extracted state generated
           rm -rf extracted/*
-          unzip -oq "$ZIP1" -d extracted
-          unzip -oq "$ZIP2" -d extracted
-          unzip -oq "$ZIP3" -d extracted
 
-          mapfile -t IMAGES < <(find extracted -type f \( -iname "*.jpg" -o -iname "*.jpeg" \) | sort)
+          VALID_ZIPS=()
+          for f in "$ZIP1" "$ZIP3"; do
+            if [ ! -f "$f" ]; then
+              echo "File non trovato, salto: $f"
+              continue
+            fi
 
-          COUNT=${#IMAGES[@]}
+            if unzip -tq "$f" >/dev/null 2>&1; then
+              DEST="extracted/${f%.zip}"
+              mkdir -p "$DEST"
+              unzip -oq "$f" -d "$DEST"
+              VALID_ZIPS+=("$f")
+              echo "ZIP valido: $f"
+            else
+              echo "ZIP non valido, salto: $f"
+            fi
+          done
 
-          if [ "$COUNT" -ne 30 ]; then
-            echo "Errore: trovati $COUNT JPEG, ne servono esattamente 30."
-            printf '%s\n' "${IMAGES[@]}"
+          if [ "${#VALID_ZIPS[@]}" -eq 0 ]; then
+            echo "Nessun pacchetto JPEG valido disponibile."
             exit 1
           fi
+
+          mapfile -t IMAGES < <(find extracted -type f \( -iname '*.jpg' -o -iname '*.jpeg' \) | sort)
+          COUNT=${#IMAGES[@]}
+
+          if [ "$COUNT" -lt 1 ]; then
+            echo "Nessun JPEG trovato."
+            exit 1
+          fi
+
+          echo "JPEG disponibili: $COUNT"
+          PACK_HASH=$(sha256sum "${VALID_ZIPS[@]}" | sha256sum | awk '{print $1}')
 
           OLD_HASH=""
           if [ -f state/pack_hash.txt ]; then
@@ -69,14 +85,14 @@ jobs:
 
           if [ "$PACK_HASH" != "$OLD_HASH" ]; then
             NEXT=1
-            echo "Nuovo pacchetto rilevato: riparto dalla foto 01."
+            echo "Pacchetto cambiato: parto dalla foto 1."
           elif [ -f state/next_reel.txt ]; then
             NEXT=$(cat state/next_reel.txt)
           else
             NEXT=1
           fi
 
-          if ! [[ "$NEXT" =~ ^[0-9]+$ ]] || [ "$NEXT" -lt 1 ] || [ "$NEXT" -gt 30 ]; then
+          if ! [[ "$NEXT" =~ ^[0-9]+$ ]] || [ "$NEXT" -lt 1 ] || [ "$NEXT" -gt "$COUNT" ]; then
             NEXT=1
           fi
 
@@ -84,16 +100,17 @@ jobs:
           IMAGE="${IMAGES[$INDEX]}"
 
           echo "Foto scelta: $IMAGE"
-          echo "Numero Reel: $NEXT"
+          echo "Numero Reel: $NEXT di $COUNT"
 
           echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "pack_hash=$PACK_HASH" >> "$GITHUB_OUTPUT"
 
       - name: Crea Reel verticale
+        shell: bash
         run: |
-          set -e
-
+          set -euo pipefail
           IMAGE="${{ steps.choose.outputs.image }}"
 
           ffmpeg -y \
@@ -101,16 +118,7 @@ jobs:
             -i "$IMAGE" \
             -f lavfi \
             -i anullsrc=r=48000:cl=stereo \
-            -filter_complex "
-              [0:v]split=2[bg][fg];
-              [bg]scale=1080:1920:force_original_aspect_ratio=increase,
-                  crop=1080:1920,
-                  boxblur=30:20,
-                  eq=brightness=-0.20[background];
-              [fg]scale=1000:1760:force_original_aspect_ratio=decrease[foreground];
-              [background][foreground]overlay=(W-w)/2:(H-h)/2,
-                  format=yuv420p[video]
-            " \
+            -filter_complex "[0:v]split=2[bg][fg];[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=30:20,eq=brightness=-0.20[background];[fg]scale=1000:1760:force_original_aspect_ratio=decrease[foreground];[background][foreground]overlay=(W-w)/2:(H-h)/2,format=yuv420p[video]" \
             -map "[video]" \
             -map 1:a \
             -t 8 \
@@ -123,10 +131,11 @@ jobs:
             -movflags +faststart \
             generated/reel-current.mp4
 
-      - name: Pubblica MP4 su GitHub
+      - name: Pubblica MP4 nel repository
         id: video
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
           git config user.name "Kairon Auto Social"
           git config user.email "kaironlabsstudio@gmail.com"
@@ -137,14 +146,12 @@ jobs:
 
           VIDEO_COMMIT=$(git rev-parse HEAD)
           VIDEO_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${VIDEO_COMMIT}/generated/reel-current.mp4"
-
           echo "url=$VIDEO_URL" >> "$GITHUB_OUTPUT"
-          echo "Video pubblico: $VIDEO_URL"
 
       - name: Attendi disponibilita video
+        shell: bash
         run: |
-          set -e
-
+          set -euo pipefail
           VIDEO_URL="${{ steps.video.outputs.url }}"
 
           for i in {1..18}; do
@@ -152,7 +159,7 @@ jobs:
               echo "Video disponibile."
               exit 0
             fi
-            echo "Attendo GitHub..."
+            echo "Attendo GitHub... tentativo $i"
             sleep 10
           done
 
@@ -160,50 +167,41 @@ jobs:
           exit 1
 
       - name: Pubblica Reel Instagram
+        shell: bash
         env:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
           VIDEO_URL: ${{ steps.video.outputs.url }}
           REEL_NUMBER: ${{ steps.choose.outputs.next }}
         run: |
-          set -e
+          set -euo pipefail
 
           CAPTIONS=(
-            "Siti web su misura per trasformare idee in progetti digitali. Scrivici in DM. #KaironLabsStudio #SitiWeb #WebDesign"
-            "Web app intelligenti per semplificare lavoro, vendite e gestione. #KaironLabsStudio #WebApp #Digital"
-            "App mobile moderne, intuitive e progettate su misura. #KaironLabsStudio #AppDevelopment #MobileApp"
+            "Siti web su misura per trasformare idee in progetti digitali. Scrivici in DM per una demo gratuita. #KaironLabsStudio #SitiWeb #WebDesign"
+            "Web app intelligenti per semplificare lavoro, vendite e gestione. Demo gratuita in DM. #KaironLabsStudio #WebApp #Digital"
+            "App moderne, intuitive e progettate su misura. Scrivici per una demo gratuita. #KaironLabsStudio #AppDevelopment"
             "Automazioni digitali per risparmiare tempo e lavorare meglio. #KaironLabsStudio #Automazione #Digital"
             "Brand digitali forti, riconoscibili e coerenti. #KaironLabsStudio #Branding #DigitalDesign"
             "Dashboard professionali per trasformare i dati in decisioni. #KaironLabsStudio #Dashboard #WebApp"
             "E-commerce pensati per vendere e crescere online. #KaironLabsStudio #Ecommerce #WebDesign"
-            "Soluzioni digitali costruite davvero sulle esigenze del progetto. #KaironLabsStudio #Software #Digital"
+            "Soluzioni digitali costruite sulle esigenze reali del progetto. #KaironLabsStudio #Software #Digital"
             "Sviluppo videogiochi con Godot: concept, prototipi e mondi interattivi. #KaironLabsStudio #Godot #GameDev"
             "Supporto e crescita digitale: il progetto continua anche dopo il lancio. #KaironLabsStudio #DigitalGrowth"
-            "Siti web professionali, veloci e pensati per convertire. #KaironLabsStudio #SitiWeb #WebDesign"
+            "Siti web professionali, veloci e pensati per convertire. Demo gratuita in DM. #KaironLabsStudio #SitiWeb"
             "E-commerce e prenotazioni online costruiti su misura per la tua attività. #KaironLabsStudio #Ecommerce"
             "Gestionali, CRM e strumenti interni per lavorare in modo più semplice. #KaironLabsStudio #WebApp #CRM"
             "App mobile premium: design moderno, prestazioni e semplicità. #KaironLabsStudio #MobileApp"
-            "Automazione e integrazioni per collegare strumenti e processi. #KaironLabsStudio #Automation #API"
+            "Automazioni e integrazioni per collegare strumenti e processi. #KaironLabsStudio #Automation #API"
             "Una presenza digitale forte parte da un brand coerente. #KaironLabsStudio #Branding #Design"
             "Piattaforme web intelligenti per aziende e professionisti. #KaironLabsStudio #WebDevelopment"
             "Strategia, supporto e tecnologia per far crescere il tuo progetto. #KaironLabsStudio #DigitalGrowth"
-            "Dal concept al prototipo: sviluppiamo videogiochi e idee interattive con Godot. #KaironLabsStudio #Godot #GameDev"
-            "Dall'idea al prodotto: progetti digitali su misura, pronti a crescere. #KaironLabsStudio #DigitalStudio"
-            "E-commerce su misura, veloci e pronti a vendere. #KaironLabsStudio #Ecommerce #OnlineBusiness"
-            "AI e automazioni per rendere il lavoro più rapido ed efficiente. #KaironLabsStudio #AI #Automation"
-            "Prenotazioni online semplici per clienti e attività. #KaironLabsStudio #Booking #WebApp"
-            "Siti vetrina eleganti, veloci e professionali. #KaironLabsStudio #SitiWeb #Business"
-            "Gestionali personalizzati per organizzare dati, lavoro e processi. #KaironLabsStudio #Software #Gestionale"
-            "Landing page progettate per trasformare visite in contatti. #KaironLabsStudio #LandingPage #Marketing"
-            "Lead e contatti automatici con flussi digitali intelligenti. #KaironLabsStudio #LeadGeneration #Automation"
-            "UX e UI moderne per applicazioni facili e piacevoli da usare. #KaironLabsStudio #UXUI #AppDesign"
-            "Sviluppo videogiochi: concept, gameplay e mondi interattivi. #KaironLabsStudio #GameDev #Godot"
-            "Dall'idea al prodotto digitale: strategia, sviluppo e crescita. Scrivici in DM. #KaironLabsStudio #Digital"
+            "Dal concept al prototipo: videogiochi e idee interattive con Godot. #KaironLabsStudio #Godot #GameDev"
+            "Dall'idea al prodotto digitale: progetti su misura e demo gratuita. Scrivici in DM. #KaironLabsStudio #DigitalStudio"
           )
 
-          IDX=$((REEL_NUMBER - 1))
+          IDX=$(( (REEL_NUMBER - 1) % ${#CAPTIONS[@]} ))
           CAPTION="${CAPTIONS[$IDX]}"
 
-          PROFILE=$(curl --silent --show-error \
+          PROFILE=$(curl --fail-with-body --silent --show-error \
             -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
             "https://graph.instagram.com/me?fields=id,username")
 
@@ -211,14 +209,14 @@ jobs:
           USERNAME=$(echo "$PROFILE" | jq -r '.username // empty')
 
           if [ -z "$IG_USER_ID" ]; then
+            echo "Impossibile recuperare account Instagram."
             echo "$PROFILE"
             exit 1
           fi
 
           echo "Account: @$USERNAME"
-          echo "Creo Reel numero $REEL_NUMBER..."
 
-          CREATE=$(curl --silent --show-error \
+          CREATE=$(curl --fail-with-body --silent --show-error \
             -X POST \
             "https://graph.instagram.com/$IG_USER_ID/media" \
             -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
@@ -227,22 +225,17 @@ jobs:
             --data-urlencode "caption=$CAPTION" \
             --data-urlencode "share_to_feed=true")
 
-          echo "$CREATE"
-
           CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
-
           if [ -z "$CREATION_ID" ]; then
-            echo "Instagram non ha creato il contenitore Reel."
+            echo "$CREATE"
             exit 1
           fi
 
           READY=false
-
           for i in {1..24}; do
-            STATUS_JSON=$(curl --silent --show-error \
+            STATUS_JSON=$(curl --fail-with-body --silent --show-error \
               -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
               "https://graph.instagram.com/$CREATION_ID?fields=status_code")
-
             STATUS=$(echo "$STATUS_JSON" | jq -r '.status_code // empty')
             echo "Stato Instagram: $STATUS"
 
@@ -250,12 +243,10 @@ jobs:
               READY=true
               break
             fi
-
             if [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "EXPIRED" ]; then
               echo "$STATUS_JSON"
               exit 1
             fi
-
             sleep 15
           done
 
@@ -264,32 +255,29 @@ jobs:
             exit 1
           fi
 
-          PUBLISH=$(curl --silent --show-error \
+          PUBLISH=$(curl --fail-with-body --silent --show-error \
             -X POST \
             "https://graph.instagram.com/$IG_USER_ID/media_publish" \
             -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
             --data-urlencode "creation_id=$CREATION_ID")
 
-          echo "$PUBLISH"
-
           MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
-
           if [ -z "$MEDIA_ID" ]; then
-            echo "Pubblicazione fallita."
+            echo "$PUBLISH"
             exit 1
           fi
 
-          echo "REEL $REEL_NUMBER PUBBLICATO!"
-          echo "Media ID: $MEDIA_ID"
+          echo "REEL $REEL_NUMBER PUBBLICATO! Media ID: $MEDIA_ID"
 
       - name: Salva avanzamento
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
           CURRENT=${{ steps.choose.outputs.next }}
+          COUNT=${{ steps.choose.outputs.count }}
           NEXT=$((CURRENT + 1))
-
-          if [ "$NEXT" -gt 30 ]; then
+          if [ "$NEXT" -gt "$COUNT" ]; then
             NEXT=1
           fi
 
@@ -299,7 +287,6 @@ jobs:
 
           git config user.name "Kairon Auto Social"
           git config user.email "kaironlabsstudio@gmail.com"
-
           git add state/next_reel.txt state/pack_hash.txt
           git commit -m "Advance Kairon Reel queue to $NEXT" || true
 
@@ -308,7 +295,6 @@ jobs:
               echo "Stato salvato. Prossimo Reel: $NEXT"
               exit 0
             fi
-            echo "Riprovo salvataggio stato..."
             git pull --rebase
             sleep 5
           done
