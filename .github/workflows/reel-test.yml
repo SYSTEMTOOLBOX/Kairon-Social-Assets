@@ -1,0 +1,80 @@
+name: Kairon Reel Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-reel:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Scarica repository
+        uses: actions/checkout@v4
+
+      - name: Installa FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Crea video Reel
+        run: |
+          mkdir -p generated
+
+          ffmpeg -y \
+            -loop 1 \
+            -i kairon-webapp-test-1.jpg \
+            -f lavfi \
+            -i anullsrc=r=48000:cl=stereo \
+            -filter_complex \
+            "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,zoompan=z='min(zoom+0.0008,1.06)':d=240:s=1080x1920:fps=30,format=yuv420p[v]" \
+            -map "[v]" \
+            -map 1:a \
+            -t 8 \
+            -c:v libx264 \
+            -preset medium \
+            -crf 20 \
+            -c:a aac \
+            -b:a 128k \
+            -movflags +faststart \
+            generated/reel-test.mp4
+
+      - name: Pubblica MP4 nel repository
+        run: |
+          git config user.name "Kairon Auto Social"
+          git config user.email "kaironlabsstudio@gmail.com"
+
+          git add generated/reel-test.mp4
+          git commit -m "Generate Instagram Reel test" || true
+          git push
+
+      - name: Attendi disponibilita video pubblico
+        run: |
+          VIDEO_URL="https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/main/generated/reel-test.mp4"
+
+          echo "Controllo disponibilita MP4..."
+
+          for i in {1..12}; do
+            if curl -fL --silent --output /dev/null "$VIDEO_URL"; then
+              echo "Video pubblico disponibile."
+              exit 0
+            fi
+
+            echo "Attendo GitHub..."
+            sleep 10
+          done
+
+          echo "Video non disponibile."
+          exit 1
+
+      - name: Pubblica Reel Instagram
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+        run: |
+          set -e
+
+          VIDEO_URL="https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/main/generated/reel-test.mp4"
+
+          CAPTION="Kairon Labs Studio
