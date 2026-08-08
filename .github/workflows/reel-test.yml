@@ -3,78 +3,88 @@ name: Kairon Reel Test
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   publish-reel:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Scarica repository
-        uses: actions/checkout@v4
-
-      - name: Installa FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-
-      - name: Crea video Reel
-        run: |
-          mkdir -p generated
-
-          ffmpeg -y \
-            -loop 1 \
-            -i kairon-webapp-test-1.jpg \
-            -f lavfi \
-            -i anullsrc=r=48000:cl=stereo \
-            -filter_complex \
-            "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,zoompan=z='min(zoom+0.0008,1.06)':d=240:s=1080x1920:fps=30,format=yuv420p[v]" \
-            -map "[v]" \
-            -map 1:a \
-            -t 8 \
-            -c:v libx264 \
-            -preset medium \
-            -crf 20 \
-            -c:a aac \
-            -b:a 128k \
-            -movflags +faststart \
-            generated/reel-test.mp4
-
-      - name: Pubblica MP4 nel repository
-        run: |
-          git config user.name "Kairon Auto Social"
-          git config user.email "kaironlabsstudio@gmail.com"
-
-          git add generated/reel-test.mp4
-          git commit -m "Generate Instagram Reel test" || true
-          git push
-
-      - name: Attendi disponibilita video pubblico
-        run: |
-          VIDEO_URL="https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/main/generated/reel-test.mp4"
-
-          echo "Controllo disponibilita MP4..."
-
-          for i in {1..12}; do
-            if curl -fL --silent --output /dev/null "$VIDEO_URL"; then
-              echo "Video pubblico disponibile."
-              exit 0
-            fi
-
-            echo "Attendo GitHub..."
-            sleep 10
-          done
-
-          echo "Video non disponibile."
-          exit 1
-
       - name: Pubblica Reel Instagram
         env:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          VIDEO_URL: https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/main/generated/reel-test.mp4
+          CAPTION: Kairon Labs Studio - Siti web, web app, applicazioni e sviluppo videogiochi. Hai un progetto in mente? Scrivici in DM. #KaironLabsStudio #WebDesign #WebApp #GameDev #Godot
         run: |
           set -e
 
-          VIDEO_URL="https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/main/generated/reel-test.mp4"
+          echo "Recupero account Instagram..."
 
-          CAPTION="Kairon Labs Studio
+          PROFILE=$(curl --silent --show-error \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            "https://graph.instagram.com/me?fields=id,username")
+
+          IG_USER_ID=$(echo "$PROFILE" | jq -r '.id')
+          USERNAME=$(echo "$PROFILE" | jq -r '.username')
+
+          echo "Account: @$USERNAME"
+          echo "Creo il Reel..."
+
+          CREATE=$(curl --silent --show-error \
+            -X POST \
+            "https://graph.instagram.com/$IG_USER_ID/media" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "media_type=REELS" \
+            --data-urlencode "video_url=$VIDEO_URL" \
+            --data-urlencode "caption=$CAPTION" \
+            --data-urlencode "share_to_feed=true")
+
+          echo "$CREATE"
+
+          CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
+
+          if [ -z "$CREATION_ID" ]; then
+            echo "Instagram non ha creato il contenitore Reel."
+            exit 1
+          fi
+
+          echo "Contenitore creato: $CREATION_ID"
+
+          for i in {1..20}; do
+            STATUS_JSON=$(curl --silent --show-error \
+              -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+              "https://graph.instagram.com/$CREATION_ID?fields=status_code")
+
+            STATUS=$(echo "$STATUS_JSON" | jq -r '.status_code // empty')
+
+            echo "Stato Instagram: $STATUS"
+
+            if [ "$STATUS" = "FINISHED" ]; then
+              break
+            fi
+
+            if [ "$STATUS" = "ERROR" ]; then
+              echo "$STATUS_JSON"
+              exit 1
+            fi
+
+            sleep 15
+          done
+
+          echo "Pubblico il Reel..."
+
+          PUBLISH=$(curl --silent --show-error \
+            -X POST \
+            "https://graph.instagram.com/$IG_USER_ID/media_publish" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "creation_id=$CREATION_ID")
+
+          echo "$PUBLISH"
+
+          MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
+
+          if [ -z "$MEDIA_ID" ]; then
+            echo "Pubblicazione fallita."
+            exit 1
+          fi
+
+          echo "REEL PUBBLICATO!"
+          echo "Media ID: $MEDIA_ID"
