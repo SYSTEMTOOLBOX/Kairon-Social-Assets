@@ -1,0 +1,91 @@
+name: Kairon Pizza Direct Final
+
+on:
+  push:
+    paths:
+      - '.github/workflows/pizza-direct-final.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rebuild ready pizza Reel
+        id: video
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p generated
+          cat tmp/pizza_b64_01.txt tmp/pizza_b64_02.txt tmp/pizza_b64_03.txt tmp/pizza_b64_04.txt tmp/pizza_b64_05.txt tmp/pizza_b64_06.txt tmp/pizza_b64_07.txt tmp/pizza_b64_08.txt | tr -d '\n\r ' | base64 -d > generated/pizza-direct-final.mp4
+          test "$(stat -c%s generated/pizza-direct-final.mp4)" -eq 28559
+          echo "b78f08c05d64ac786a549a2a50a27a627bd2c0186ba311fe0f73bc0785bb16e8  generated/pizza-direct-final.mp4" | sha256sum -c -
+          git config user.name "Kairon Auto Social"
+          git config user.email "kaironlabsstudio@gmail.com"
+          git add generated/pizza-direct-final.mp4
+          git commit -m "Add ready pizzeria Reel" || true
+          git push
+          SHA=$(git rev-parse HEAD)
+          echo "url=https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/pizza-direct-final.mp4" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for public video
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="${{ steps.video.outputs.url }}"
+          for i in {1..24}; do
+            if curl -fL --silent --output /dev/null "$URL"; then
+              echo "Video public: $URL"
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+      - name: Publish pizza Reel Instagram
+        shell: bash
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          VIDEO_URL: ${{ steps.video.outputs.url }}
+        run: |
+          set -euo pipefail
+          PROFILE=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/me?fields=id,username")
+          IG_USER_ID=$(echo "$PROFILE" | jq -r '.id // empty')
+          test -n "$IG_USER_ID"
+
+          CAPTION="La tua pizzeria merita un sito che faccia venire fame al primo sguardo. Realizziamo siti web su misura per pizzerie e attivita locali. Vuoi vedere una demo gratuita? Scrivici in DM. #KaironLabsStudio #Pizzeria #SitiWeb #WebDesign"
+
+          CREATE=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "media_type=REELS" \
+            --data-urlencode "video_url=$VIDEO_URL" \
+            --data-urlencode "caption=$CAPTION" \
+            --data-urlencode "share_to_feed=true")
+
+          CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
+          test -n "$CREATION_ID"
+
+          READY=false
+          for i in {1..30}; do
+            STATUS_JSON=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/$CREATION_ID?fields=status_code")
+            STATUS=$(echo "$STATUS_JSON" | jq -r '.status_code // empty')
+            echo "Instagram status: $STATUS"
+            if [ "$STATUS" = "FINISHED" ]; then READY=true; break; fi
+            if [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "EXPIRED" ]; then echo "$STATUS_JSON"; exit 1; fi
+            sleep 10
+          done
+          test "$READY" = "true"
+
+          PUBLISH=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "creation_id=$CREATION_ID")
+          MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
+          test -n "$MEDIA_ID"
+          echo "PIZZA REEL PUBLISHED: $MEDIA_ID"
