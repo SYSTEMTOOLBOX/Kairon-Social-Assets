@@ -1,0 +1,76 @@
+name: Kairon Emergency Direct
+
+on:
+  push:
+    paths:
+      - '.github/workflows/reel-emergency-direct.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  direct-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build Reel fast
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v ffmpeg >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core; }
+          mkdir -p generated
+          ffmpeg -hide_banner -loglevel error -y -loop 1 -i today/kairon-pizzeria.jpg \
+            -f lavfi -i anullsrc=r=44100:cl=stereo \
+            -t 9 -shortest \
+            -vf "scale=1080:-2:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,format=yuv420p" \
+            -r 24 -c:v libx264 -preset ultrafast -crf 25 -c:a aac -b:a 64k -movflags +faststart \
+            generated/kairon-pizzeria-now.mp4
+          test -s generated/kairon-pizzeria-now.mp4
+
+      - name: Publish video file to GitHub
+        id: video
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Kairon Auto Social'
+          git config user.email 'kaironlabsstudio@gmail.com'
+          git add generated/kairon-pizzeria-now.mp4
+          git commit -m 'Emergency pizzeria Reel video' || true
+          git push
+          SHA=$(git rev-parse HEAD)
+          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/kairon-pizzeria-now.mp4"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          for i in {1..20}; do curl -fL --silent --output /dev/null "$URL" && exit 0; sleep 3; done
+          exit 1
+
+      - name: Publish Instagram
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          VIDEO_URL: ${{ steps.video.outputs.url }}
+        run: |
+          set -euo pipefail
+          ME=$(curl -fsS -H "Authorization: Bearer $TOKEN" 'https://graph.instagram.com/me?fields=id,username')
+          IG=$(echo "$ME" | jq -r '.id')
+          CAPTION="La tua pizzeria merita un sito che faccia venire fame al primo sguardo. 🍕 Design su misura, menu, prenotazioni e contatto rapido. Vuoi vedere una demo gratuita? Scrivici in DM. #KaironLabsStudio #Pizzeria #SitiWeb #WebDesign"
+          C=$(curl -fsS -X POST "https://graph.instagram.com/$IG/media" -H "Authorization: Bearer $TOKEN" --data-urlencode 'media_type=REELS' --data-urlencode "video_url=$VIDEO_URL" --data-urlencode "caption=$CAPTION" --data-urlencode 'share_to_feed=true')
+          CID=$(echo "$C" | jq -r '.id // empty')
+          test -n "$CID" || { echo "$C"; exit 1; }
+          READY=0
+          for i in {1..30}; do
+            S=$(curl -fsS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code")
+            CODE=$(echo "$S" | jq -r '.status_code // empty')
+            echo "status=$CODE"
+            [ "$CODE" = 'FINISHED' ] && { READY=1; break; }
+            [ "$CODE" = 'ERROR' ] && { echo "$S"; exit 1; }
+            sleep 6
+          done
+          [ "$READY" = 1 ] || exit 1
+          P=$(curl -fsS -X POST "https://graph.instagram.com/$IG/media_publish" -H "Authorization: Bearer $TOKEN" --data-urlencode "creation_id=$CID")
+          MID=$(echo "$P" | jq -r '.id // empty')
+          test -n "$MID" || { echo "$P"; exit 1; }
+          echo "PUBLISHED=$MID"
