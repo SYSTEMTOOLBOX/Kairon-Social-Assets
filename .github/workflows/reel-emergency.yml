@@ -1,0 +1,93 @@
+name: Kairon Emergency Reel
+
+on:
+  push:
+    paths:
+      - '.github/workflows/reel-emergency.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kairon-daily-reel
+  cancel-in-progress: true
+
+jobs:
+  emergency-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure ffmpeg
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg fonts-dejavu-core
+          fi
+
+      - name: Build emergency Reel fast
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p generated
+          FONT='/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+          ffmpeg -y -loop 1 -framerate 30 -i today/kairon-pizzeria.jpg \
+            -f lavfi -i anullsrc=r=48000:cl=stereo \
+            -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,drawbox=x=70:y=120:w=940:h=210:color=black@0.58:t=fill,drawtext=fontfile=${FONT}:text='SITO WEB PER PIZZERIA':fontcolor=white:fontsize=60:x=(w-text_w)/2:y=175,drawtext=fontfile=${FONT}:text='KAIRON LABS STUDIO':fontcolor=0xF6D36B:fontsize=36:x=(w-text_w)/2:y=h-255,drawbox=x=170:y=h-200:w=740:h=90:color=black@0.62:t=fill,drawtext=fontfile=${FONT}:text='DEMO GRATUITA  •  LINK IN BIO':fontcolor=white:fontsize=35:x=(w-text_w)/2:y=h-174,format=yuv420p" \
+            -map 0:v -map 1:a -t 9 -r 30 -c:v libx264 -preset ultrafast -crf 23 -c:a aac -b:a 96k -movflags +faststart generated/reel-emergency.mp4
+
+      - name: Commit emergency video
+        id: video
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Kairon Auto Social'
+          git config user.email 'kaironlabsstudio@gmail.com'
+          git add generated/reel-emergency.mp4
+          git commit -m 'Prepare emergency Kairon pizzeria Reel' || true
+          git push
+          SHA=$(git rev-parse HEAD)
+          echo "url=https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/reel-emergency.mp4" >> "$GITHUB_OUTPUT"
+
+      - name: Wait raw video
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..18}; do
+            if curl -fL --silent --output /dev/null '${{ steps.video.outputs.url }}'; then exit 0; fi
+            sleep 5
+          done
+          exit 1
+
+      - name: Publish Instagram Reel now
+        shell: bash
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          VIDEO_URL: ${{ steps.video.outputs.url }}
+        run: |
+          set -euo pipefail
+          PROFILE=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/me?fields=id,username")
+          IG_USER_ID=$(echo "$PROFILE" | jq -r '.id // empty')
+          test -n "$IG_USER_ID"
+          CAPTION="La tua pizzeria merita un sito che faccia venire fame al primo sguardo. Design su misura, menu, prenotazioni e contatto rapido. Vuoi vedere una demo gratuita? Scrivici in DM. #KaironLabsStudio #Pizzeria #SitiWeb #WebDesign"
+          CREATE=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media" -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" --data-urlencode "media_type=REELS" --data-urlencode "video_url=$VIDEO_URL" --data-urlencode "caption=$CAPTION" --data-urlencode "share_to_feed=true")
+          CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
+          test -n "$CREATION_ID"
+          for i in {1..24}; do
+            S=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/$CREATION_ID?fields=status_code")
+            CODE=$(echo "$S" | jq -r '.status_code // empty')
+            echo "Instagram status: $CODE"
+            if [ "$CODE" = "FINISHED" ]; then break; fi
+            if [ "$CODE" = "ERROR" ] || [ "$CODE" = "EXPIRED" ]; then echo "$S"; exit 1; fi
+            sleep 10
+          done
+          PUBLISH=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" --data-urlencode "creation_id=$CREATION_ID")
+          MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
+          test -n "$MEDIA_ID"
+          echo "PUBLISHED MEDIA ID: $MEDIA_ID"
