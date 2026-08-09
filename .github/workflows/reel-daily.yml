@@ -26,7 +26,6 @@ jobs:
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "Avvio manuale autorizzato."
             exit 0
           fi
 
@@ -36,10 +35,8 @@ jobs:
 
           if [ "$ITALY_HOUR" = "19" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "Sono le 19 in Italia: pubblicazione autorizzata."
           else
             echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "Non sono le 19 in Italia: nessuna pubblicazione."
           fi
 
   publish-reel:
@@ -59,20 +56,31 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg unzip fonts-dejavu-core
 
-      - name: Scegli prossimo JPEG valido
+      - name: Scegli contenuto del giorno
         id: choose
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p extracted state generated today
+          rm -rf extracted/*
 
+          if [ -f today/kairon-pizzeria.jpg ]; then
+            echo "Uso il visual PIZZERIA preparato per oggi."
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "special=pizzeria" >> "$GITHUB_OUTPUT"
+            echo "next=1" >> "$GITHUB_OUTPUT"
+            echo "count=1" >> "$GITHUB_OUTPUT"
+            echo "image=today/kairon-pizzeria.jpg" >> "$GITHUB_OUTPUT"
+            echo "pack_hash=pizzeria-2026-08-09" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "special=none" >> "$GITHUB_OUTPUT"
           ZIP_FILES=(
             "Kairon_Batch_01_JPEG.zip"
             "Kairon_Batch_02_JPEG_1786171801.zip"
             "Kairon_Batch_03_JPEG_1786173983.zip"
           )
-
-          mkdir -p extracted state generated
-          rm -rf extracted/*
 
           VALID_ZIPS=()
           for f in "${ZIP_FILES[@]}"; do
@@ -80,7 +88,6 @@ jobs:
               echo "Pacchetto assente, salto: $f"
               continue
             fi
-
             if unzip -tq "$f" >/dev/null 2>&1; then
               DEST="extracted/${f%.zip}"
               mkdir -p "$DEST"
@@ -88,7 +95,7 @@ jobs:
               VALID_ZIPS+=("$f")
               echo "ZIP valido: $f"
             else
-              echo "ZIP non valido, escluso senza bloccare la pubblicazione: $f"
+              echo "ZIP non valido, escluso senza bloccare: $f"
             fi
           done
 
@@ -97,8 +104,6 @@ jobs:
           for img in "${CANDIDATES[@]}"; do
             if ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "$img" | grep -qE '^[0-9]+,[0-9]+'; then
               IMAGES+=("$img")
-            else
-              echo "JPEG illeggibile escluso: $img"
             fi
           done
 
@@ -108,19 +113,15 @@ jobs:
             exit 1
           fi
 
+          NEXT=1
           if [ -f state/next_reel.txt ]; then
             NEXT=$(tr -dc '0-9' < state/next_reel.txt)
-          else
-            NEXT=1
           fi
-
           if [ -z "$NEXT" ] || [ "$NEXT" -lt 1 ] || [ "$NEXT" -gt "$COUNT" ]; then
             NEXT=1
           fi
 
-          INDEX=$((NEXT - 1))
-          IMAGE="${IMAGES[$INDEX]}"
-
+          IMAGE="${IMAGES[$((NEXT - 1))]}"
           if [ ${#VALID_ZIPS[@]} -gt 0 ]; then
             PACK_HASH=$(sha256sum "${VALID_ZIPS[@]}" | sha256sum | awk '{print $1}')
           else
@@ -140,55 +141,51 @@ jobs:
         shell: bash
         env:
           REEL_NUMBER: ${{ steps.choose.outputs.next }}
+          SPECIAL: ${{ steps.choose.outputs.special }}
         run: |
           set -euo pipefail
-
           IMAGE="${{ steps.choose.outputs.image }}"
           FONT="/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
-          HOOKS=(
-            "IL TUO SITO DEVE FARSI NOTARE"
-            "NON IL SOLITO SITO"
-            "UN'IDEA. UNA DEMO. UN PRODOTTO."
-            "AUTOMATIZZA IL LAVORO RIPETITIVO"
-            "IL BRAND SI VEDE PRIMA DI LEGGERSI"
-            "MENO CLICK. PIU RISULTATI."
-            "IL TUO E-COMMERCE PUO FARE DI PIU"
-            "SOFTWARE COSTRUITO INTORNO A TE"
-            "DA IDEA A VIDEOGIOCO"
-            "IL DIGITALE DEVE LAVORARE PER TE"
-            "SITO VELOCE. IMPATTO FORTE."
-            "PRENOTAZIONI SENZA ATTRITO"
-            "GESTISCI TUTTO IN UN SOLO POSTO"
-            "APP PENSATE PER ESSERE USATE"
-            "COLLEGA. AUTOMATIZZA. CRESCI."
-            "UN BRAND CHE SI RICONOSCE"
-            "WEB APP CHE SEMBRANO SEMPLICI"
-            "TRASFORMA UN'IDEA IN PROGETTO"
-            "GODOT. GAMEPLAY. IDENTITA."
-            "VUOI VEDERE LA TUA IDEA ONLINE?"
-          )
-
-          IDX=$(( (REEL_NUMBER - 1) % ${#HOOKS[@]} ))
-          HOOK="${HOOKS[$IDX]}"
+          if [ "$SPECIAL" = "pizzeria" ]; then
+            HOOK="LA TUA PIZZERIA. ONLINE."
+          else
+            HOOKS=(
+              "IL TUO SITO DEVE FARSI NOTARE"
+              "NON IL SOLITO SITO"
+              "UN'IDEA. UNA DEMO. UN PRODOTTO."
+              "AUTOMATIZZA IL LAVORO RIPETITIVO"
+              "IL BRAND SI VEDE PRIMA DI LEGGERSI"
+              "MENO CLICK. PIU RISULTATI."
+              "IL TUO E-COMMERCE PUO FARE DI PIU"
+              "SOFTWARE COSTRUITO INTORNO A TE"
+              "DA IDEA A VIDEOGIOCO"
+              "IL DIGITALE DEVE LAVORARE PER TE"
+              "SITO VELOCE. IMPATTO FORTE."
+              "PRENOTAZIONI SENZA ATTRITO"
+              "GESTISCI TUTTO IN UN SOLO POSTO"
+              "APP PENSATE PER ESSERE USATE"
+              "COLLEGA. AUTOMATIZZA. CRESCI."
+              "UN BRAND CHE SI RICONOSCE"
+              "WEB APP CHE SEMBRANO SEMPLICI"
+              "TRASFORMA UN'IDEA IN PROGETTO"
+              "GODOT. GAMEPLAY. IDENTITA."
+              "VUOI VEDERE LA TUA IDEA ONLINE?"
+            )
+            IDX=$(( (REEL_NUMBER - 1) % ${#HOOKS[@]} ))
+            HOOK="${HOOKS[$IDX]}"
+          fi
 
           ffmpeg -y \
             -loop 1 -framerate 30 -i "$IMAGE" \
             -f lavfi -i anullsrc=r=48000:cl=stereo \
-            -filter_complex "[0:v]split=2[bg][fg];[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=32:20,eq=brightness=-0.25:saturation=0.85[background];[fg]scale=1000:1760:force_original_aspect_ratio=decrease[foreground];[background][foreground]overlay=(W-w)/2:(H-h)/2[base];[base]zoompan=z='min(zoom+0.00075,1.055)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=1080x1920:fps=30,drawbox=x=70:y=125:w=940:h=235:color=black@0.58:t=fill:enable='between(t,0.15,3.1)',drawtext=fontfile=${FONT}:text='${HOOK}':fontcolor=white:fontsize=62:line_spacing=10:x=(w-text_w)/2:y=185:box=0:enable='between(t,0.15,3.1)',drawtext=fontfile=${FONT}:text='KAIRON LABS STUDIO':fontcolor=0xF6D36B:fontsize=34:x=(w-text_w)/2:y=h-260,drawbox=x=170:y=h-205:w=740:h=92:color=black@0.62:t=fill:enable='between(t,6.1,9)',drawtext=fontfile=${FONT}:text='DEMO GRATUITA  •  LINK IN BIO':fontcolor=white:fontsize=35:x=(w-text_w)/2:y=h-178:enable='between(t,6.1,9)',fade=t=in:st=0:d=0.35,fade=t=out:st=8.6:d=0.4,format=yuv420p[video]" \
-            -map "[video]" \
-            -map 1:a \
-            -t 9 \
-            -r 30 \
-            -c:v libx264 \
-            -preset medium \
-            -crf 20 \
-            -c:a aac \
-            -b:a 128k \
+            -filter_complex "[0:v]split=2[bg][fg];[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=32:20,eq=brightness=-0.25:saturation=0.85[background];[fg]scale=1000:1760:force_original_aspect_ratio=decrease[foreground];[background][foreground]overlay=(W-w)/2:(H-h)/2[base];[base]zoompan=z='min(zoom+0.00075,1.055)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=1080x1920:fps=30,drawbox=x=70:y=125:w=940:h=210:color=black@0.48:t=fill:enable='between(t,0.15,2.7)',drawtext=fontfile=${FONT}:text='${HOOK}':fontcolor=white:fontsize=56:x=(w-text_w)/2:y=190:enable='between(t,0.15,2.7)',drawtext=fontfile=${FONT}:text='KAIRON LABS STUDIO':fontcolor=0xF6D36B:fontsize=34:x=(w-text_w)/2:y=h-260,drawbox=x=170:y=h-205:w=740:h=92:color=black@0.62:t=fill:enable='between(t,6.1,9)',drawtext=fontfile=${FONT}:text='DEMO GRATUITA  •  LINK IN BIO':fontcolor=white:fontsize=35:x=(w-text_w)/2:y=h-178:enable='between(t,6.1,9)',fade=t=in:st=0:d=0.35,fade=t=out:st=8.6:d=0.4,format=yuv420p[video]" \
+            -map "[video]" -map 1:a \
+            -t 9 -r 30 \
+            -c:v libx264 -preset medium -crf 20 \
+            -c:a aac -b:a 128k \
             -movflags +faststart \
             generated/reel-current.mp4
-
-          ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 generated/reel-current.mp4
 
       - name: Pubblica MP4 nel repository
         if: steps.choose.outputs.available == 'true'
@@ -196,14 +193,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           git config user.name "Kairon Auto Social"
           git config user.email "kaironlabsstudio@gmail.com"
-
           git add generated/reel-current.mp4
-          git commit -m "Prepare cinematic Kairon Reel ${{ steps.choose.outputs.next }}" || true
+          git commit -m "Prepare Kairon Reel ${{ steps.choose.outputs.special }} ${{ steps.choose.outputs.next }}" || true
           git push
-
           VIDEO_COMMIT=$(git rev-parse HEAD)
           VIDEO_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${VIDEO_COMMIT}/generated/reel-current.mp4"
           echo "url=$VIDEO_URL" >> "$GITHUB_OUTPUT"
@@ -214,17 +208,12 @@ jobs:
         run: |
           set -euo pipefail
           VIDEO_URL="${{ steps.video.outputs.url }}"
-
           for i in {1..18}; do
             if curl -fL --silent --output /dev/null "$VIDEO_URL"; then
-              echo "Video disponibile."
               exit 0
             fi
-            echo "Attendo GitHub... tentativo $i"
             sleep 10
           done
-
-          echo "Video non disponibile in tempo."
           exit 1
 
       - name: Pubblica Reel Instagram
@@ -234,64 +223,41 @@ jobs:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
           VIDEO_URL: ${{ steps.video.outputs.url }}
           REEL_NUMBER: ${{ steps.choose.outputs.next }}
+          SPECIAL: ${{ steps.choose.outputs.special }}
         run: |
           set -euo pipefail
 
-          CAPTIONS=(
-            "Il tuo sito deve farsi notare. Progettiamo esperienze digitali su misura. Demo gratuita dal link in bio. #KaironLabsStudio #SitiWeb #WebDesign"
-            "Non il solito sito: identita forte, velocita e design pensato per il tuo progetto. #KaironLabsStudio #WebDesign #Business"
-            "Dall'idea alla demo, fino al prodotto digitale. Scrivici o visita il link in bio. #KaironLabsStudio #DigitalStudio #WebApp"
-            "Meno lavoro ripetitivo, piu tempo per quello che conta. Automazioni digitali su misura. #KaironLabsStudio #Automation #AI"
-            "Un brand si riconosce prima ancora di leggerlo. Costruiamo identita digitali forti. #KaironLabsStudio #Branding #Design"
-            "Meno click, piu risultati. Web app progettate attorno al lavoro reale. #KaironLabsStudio #WebApp #UXUI"
-            "E-commerce veloci, chiari e costruiti per vendere. Demo gratuita dal link in bio. #KaironLabsStudio #Ecommerce #WebDesign"
-            "Software su misura: niente pacchetti forzati, solo strumenti costruiti intorno al progetto. #KaironLabsStudio #Software #Digital"
-            "Da un'idea a un videogioco: concept, prototipi e gameplay con Godot 4. #KaironLabsStudio #Godot #GameDev"
-            "Il digitale deve lavorare per te, non il contrario. #KaironLabsStudio #Automation #Digital"
-            "Sito veloce. Impatto forte. Esperienza chiara su ogni dispositivo. #KaironLabsStudio #SitiWeb #Responsive"
-            "Prenotazioni online semplici per clienti e attivita. #KaironLabsStudio #Booking #WebApp"
-            "Dashboard e gestionali per avere tutto sotto controllo. #KaironLabsStudio #Gestionale #WebApp"
-            "App pensate per essere usate davvero: semplici, veloci e su misura. #KaironLabsStudio #AppDevelopment #UX"
-            "Collega strumenti, automatizza processi, fai crescere il progetto. #KaironLabsStudio #API #Automation"
-            "Un brand forte non si confonde. Design e presenza digitale su misura. #KaironLabsStudio #Branding #DigitalDesign"
-            "Web app complesse fuori, semplici da usare dentro. #KaironLabsStudio #WebDevelopment #UXUI"
-            "Trasformiamo idee in progetti online concreti. Demo gratuita dal link in bio. #KaironLabsStudio #DigitalStudio #Startup"
-            "Godot, gameplay e identita visiva: il laboratorio game di Kairon. #KaironLabsStudio #Godot4 #GameDev"
-            "Vuoi vedere la tua idea online prima di decidere? Richiedi una demo gratuita. #KaironLabsStudio #DemoGratuita #WebDesign"
-          )
-
-          IDX=$(( (REEL_NUMBER - 1) % ${#CAPTIONS[@]} ))
-          CAPTION="${CAPTIONS[$IDX]}"
+          if [ "$SPECIAL" = "pizzeria" ]; then
+            CAPTION="La tua pizzeria merita piu di una semplice pagina online. Prenotazioni, menu digitale e contatti rapidi in un sito fatto su misura. Vuoi vedere una demo gratuita? Link in bio o scrivici in DM. #KaironLabsStudio #Pizzeria #SitiWeb #WebDesign #Ristorazione"
+          else
+            CAPTIONS=(
+              "Il tuo sito deve farsi notare. Progettiamo esperienze digitali su misura. Demo gratuita dal link in bio. #KaironLabsStudio #SitiWeb #WebDesign"
+              "Non il solito sito: identita forte, velocita e design pensato per il tuo progetto. #KaironLabsStudio #WebDesign #Business"
+              "Dall'idea alla demo, fino al prodotto digitale. Scrivici o visita il link in bio. #KaironLabsStudio #DigitalStudio #WebApp"
+              "Meno lavoro ripetitivo, piu tempo per quello che conta. Automazioni digitali su misura. #KaironLabsStudio #Automation #AI"
+              "Un brand si riconosce prima ancora di leggerlo. Costruiamo identita digitali forti. #KaironLabsStudio #Branding #Design"
+            )
+            IDX=$(( (REEL_NUMBER - 1) % ${#CAPTIONS[@]} ))
+            CAPTION="${CAPTIONS[$IDX]}"
+          fi
 
           PROFILE=$(curl --fail-with-body --silent --show-error \
             -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
             "https://graph.instagram.com/me?fields=id,username")
-
           IG_USER_ID=$(echo "$PROFILE" | jq -r '.id // empty')
           USERNAME=$(echo "$PROFILE" | jq -r '.username // empty')
-
-          if [ -z "$IG_USER_ID" ]; then
-            echo "Impossibile recuperare account Instagram."
-            echo "$PROFILE"
-            exit 1
-          fi
-
+          [ -n "$IG_USER_ID" ] || { echo "$PROFILE"; exit 1; }
           echo "Account: @$USERNAME"
 
           CREATE=$(curl --fail-with-body --silent --show-error \
-            -X POST \
-            "https://graph.instagram.com/$IG_USER_ID/media" \
+            -X POST "https://graph.instagram.com/$IG_USER_ID/media" \
             -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
             --data-urlencode "media_type=REELS" \
             --data-urlencode "video_url=$VIDEO_URL" \
             --data-urlencode "caption=$CAPTION" \
             --data-urlencode "share_to_feed=true")
-
           CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
-          if [ -z "$CREATION_ID" ]; then
-            echo "$CREATE"
-            exit 1
-          fi
+          [ -n "$CREATION_ID" ] || { echo "$CREATE"; exit 1; }
 
           READY=false
           for i in {1..24}; do
@@ -300,67 +266,48 @@ jobs:
               "https://graph.instagram.com/$CREATION_ID?fields=status_code")
             STATUS=$(echo "$STATUS_JSON" | jq -r '.status_code // empty')
             echo "Stato Instagram: $STATUS"
-
-            if [ "$STATUS" = "FINISHED" ]; then
-              READY=true
-              break
-            fi
-            if [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "EXPIRED" ]; then
-              echo "$STATUS_JSON"
-              exit 1
-            fi
+            if [ "$STATUS" = "FINISHED" ]; then READY=true; break; fi
+            if [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "EXPIRED" ]; then echo "$STATUS_JSON"; exit 1; fi
             sleep 15
           done
-
-          if [ "$READY" != "true" ]; then
-            echo "Instagram non ha terminato l'elaborazione in tempo."
-            exit 1
-          fi
+          [ "$READY" = "true" ] || exit 1
 
           PUBLISH=$(curl --fail-with-body --silent --show-error \
-            -X POST \
-            "https://graph.instagram.com/$IG_USER_ID/media_publish" \
+            -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" \
             -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
             --data-urlencode "creation_id=$CREATION_ID")
-
           MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
-          if [ -z "$MEDIA_ID" ]; then
-            echo "$PUBLISH"
-            exit 1
-          fi
-
-          echo "REEL $REEL_NUMBER PUBBLICATO! Media ID: $MEDIA_ID"
+          [ -n "$MEDIA_ID" ] || { echo "$PUBLISH"; exit 1; }
+          echo "REEL PUBBLICATO! Media ID: $MEDIA_ID"
 
       - name: Salva avanzamento
         if: steps.choose.outputs.available == 'true'
         shell: bash
+        env:
+          SPECIAL: ${{ steps.choose.outputs.special }}
         run: |
           set -euo pipefail
-
-          CURRENT=${{ steps.choose.outputs.next }}
-          COUNT=${{ steps.choose.outputs.count }}
-          NEXT=$((CURRENT + 1))
-          if [ "$NEXT" -gt "$COUNT" ]; then
-            NEXT=1
-          fi
-
-          mkdir -p state
-          echo "$NEXT" > state/next_reel.txt
-          echo "${{ steps.choose.outputs.pack_hash }}" > state/pack_hash.txt
-
           git config user.name "Kairon Auto Social"
           git config user.email "kaironlabsstudio@gmail.com"
-          git add state/next_reel.txt state/pack_hash.txt
-          git commit -m "Advance Kairon Reel queue to $NEXT" || true
+
+          if [ "$SPECIAL" = "pizzeria" ]; then
+            git rm -f today/kairon-pizzeria.jpg today/README.txt 2>/dev/null || true
+            git commit -m "Complete today's Kairon pizzeria Reel" || true
+          else
+            CURRENT=${{ steps.choose.outputs.next }}
+            COUNT=${{ steps.choose.outputs.count }}
+            NEXT=$((CURRENT + 1))
+            if [ "$NEXT" -gt "$COUNT" ]; then NEXT=1; fi
+            mkdir -p state
+            echo "$NEXT" > state/next_reel.txt
+            echo "${{ steps.choose.outputs.pack_hash }}" > state/pack_hash.txt
+            git add state/next_reel.txt state/pack_hash.txt
+            git commit -m "Advance Kairon Reel queue to $NEXT" || true
+          fi
 
           for i in 1 2 3; do
-            if git push; then
-              echo "Stato salvato. Prossimo Reel: $NEXT"
-              exit 0
-            fi
+            if git push; then exit 0; fi
             git pull --rebase
             sleep 5
           done
-
-          echo "Reel pubblicato ma stato non salvato."
           exit 1
