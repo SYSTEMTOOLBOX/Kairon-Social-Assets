@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/instagram-emergency-photo-now.yml'
+      - 'today/kairon-pizzeria.jpg'
 
 permissions:
   contents: read
@@ -22,24 +23,18 @@ jobs:
           IMAGE_URL="https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/main/today/kairon-pizzeria.jpg"
           CAPTION="La tua pizzeria merita un sito che faccia venire fame al primo sguardo. Realizziamo siti web su misura per ristoranti e attivita locali. Vuoi vedere una demo gratuita? Scrivici in DM. #KaironLabsStudio #Pizzeria #SitiWeb #WebDesign"
 
-          PROFILE=$(curl --fail-with-body --silent --show-error \
-            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
-            "https://graph.instagram.com/me?fields=id,username")
+          PROFILE=$(curl --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/me?fields=id,username")
+          echo "$PROFILE"
           IG_USER_ID=$(echo "$PROFILE" | jq -r '.id // empty')
           test -n "$IG_USER_ID"
 
-          CREATE=$(curl --fail-with-body --silent --show-error \
-            -X POST "https://graph.instagram.com/$IG_USER_ID/media" \
-            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
-            --data-urlencode "image_url=$IMAGE_URL" \
-            --data-urlencode "caption=$CAPTION")
+          CREATE=$(curl --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media" -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" --data-urlencode "image_url=$IMAGE_URL" --data-urlencode "caption=$CAPTION")
+          echo "$CREATE"
           CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
           test -n "$CREATION_ID"
 
-          PUBLISH=$(curl --fail-with-body --silent --show-error \
-            -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" \
-            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
-            --data-urlencode "creation_id=$CREATION_ID")
+          PUBLISH=$(curl --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" --data-urlencode "creation_id=$CREATION_ID")
+          echo "$PUBLISH"
           MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
           test -n "$MEDIA_ID"
           echo "PHOTO PUBLISHED: $MEDIA_ID"
