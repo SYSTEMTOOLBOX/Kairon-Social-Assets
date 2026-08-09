@@ -24,9 +24,25 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p generated
-          cat tmp/pizza_b64_01.txt tmp/pizza_b64_02.txt tmp/pizza_b64_03.txt tmp/pizza_b64_04.txt tmp/pizza_b64_05.txt tmp/pizza_b64_06.txt tmp/pizza_b64_07.txt tmp/pizza_b64_08.txt | tr -d '\n\r ' | base64 -d > generated/pizza-direct-final.mp4
-          test "$(stat -c%s generated/pizza-direct-final.mp4)" -eq 28559
-          echo "b78f08c05d64ac786a549a2a50a27a627bd2c0186ba311fe0f73bc0785bb16e8  generated/pizza-direct-final.mp4" | sha256sum -c -
+          python - <<'PY'
+          from pathlib import Path
+          import base64, hashlib
+          parts=[]
+          for i in range(1,9):
+              s=''.join(Path(f'tmp/pizza_b64_{i:02d}.txt').read_text().split())
+              need=5000 if i < 8 else 3080
+              if len(s) < need:
+                  raise SystemExit(f'chunk {i} too short: {len(s)}')
+              parts.append(s[:need])
+          data=base64.b64decode(''.join(parts), validate=True)
+          if len(data) != 28559:
+              raise SystemExit(f'wrong video size: {len(data)}')
+          h=hashlib.sha256(data).hexdigest()
+          if h != 'b78f08c05d64ac786a549a2a50a27a627bd2c0186ba311fe0f73bc0785bb16e8':
+              raise SystemExit(f'wrong video hash: {h}')
+          Path('generated/pizza-direct-final.mp4').write_bytes(data)
+          print('VIDEO VERIFIED', len(data), h)
+          PY
           git config user.name "Kairon Auto Social"
           git config user.email "kaironlabsstudio@gmail.com"
           git add generated/pizza-direct-final.mp4
@@ -59,19 +75,15 @@ jobs:
           PROFILE=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/me?fields=id,username")
           IG_USER_ID=$(echo "$PROFILE" | jq -r '.id // empty')
           test -n "$IG_USER_ID"
-
           CAPTION="La tua pizzeria merita un sito che faccia venire fame al primo sguardo. Realizziamo siti web su misura per pizzerie e attivita locali. Vuoi vedere una demo gratuita? Scrivici in DM. #KaironLabsStudio #Pizzeria #SitiWeb #WebDesign"
-
           CREATE=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media" \
             -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
             --data-urlencode "media_type=REELS" \
             --data-urlencode "video_url=$VIDEO_URL" \
             --data-urlencode "caption=$CAPTION" \
             --data-urlencode "share_to_feed=true")
-
           CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
           test -n "$CREATION_ID"
-
           READY=false
           for i in {1..30}; do
             STATUS_JSON=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/$CREATION_ID?fields=status_code")
@@ -82,12 +94,9 @@ jobs:
             sleep 10
           done
           test "$READY" = "true"
-
           PUBLISH=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" \
             -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
             --data-urlencode "creation_id=$CREATION_ID")
           MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
           test -n "$MEDIA_ID"
           echo "PIZZA REEL PUBLISHED: $MEDIA_ID"
-
-# retry after exact chunk repair
