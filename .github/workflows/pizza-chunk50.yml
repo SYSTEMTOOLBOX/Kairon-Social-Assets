@@ -1,0 +1,20 @@
+name: Pizza Chunk 50 Check
+on:
+  push:
+    paths:
+      - '.github/workflows/pizza-chunk50.yml'
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check 50-char slices
+        shell: bash
+        run: |
+          set -euo pipefail
+          exp=(fac09356c88241fce4b534c8d5354e909e8019c28cb8d241f756fff8b1f84516 37700d90a9ef43308244e417e55bb2b3a2659c826080368a5380cb8c5f3166ae c4e923397c701b34c0e1ef9887619dae6e6e5b8f325c6ee27c7f53bdfdc108fe 65adc1fa8b5ffb551679b4221462d7a480700d10c3b46235f87b4182dfda322e cf3f5a06901ab83c3812c13be493e5920acb61a1e700d662c7c766938a51298f 3c88617487686f415d297bdda0f73e546556677f5ef8cebe8f89b7bb695a80ae 9d6c2657df56235f890e3f923da80b94608e6376dbd84a1d3a41babf19470c4d 045e900a2d0f5095da6a2fb75e95f03a7174f07d19667fd449f500846646bf5b 3ebd11ce8615f0419bceaf1eace2fffefd20b3822dd438b639b88d9119773895 e0f51cce45010c43b350ba94c5b5991e4c468216e7f2e634d57ca59ea4e52037)
+          f=tmp/pizza_b64_06.txt
+          for j in {0..9}; do
+            got=$(dd if="$f" bs=1 skip=$((3000+j*50)) count=50 status=none | sha256sum | cut -d' ' -f1)
+            [ "$got" = "${exp[$j]}" ] && echo "OK $j" || echo "BAD $j got=$got exp=${exp[$j]}"
+          done
