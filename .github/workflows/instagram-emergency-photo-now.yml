@@ -1,0 +1,45 @@
+name: Instagram Emergency Photo Now
+
+on:
+  push:
+    paths:
+      - '.github/workflows/instagram-emergency-photo-now.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publish-photo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish pizzeria image to Instagram
+        shell: bash
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          IMAGE_URL="https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/main/today/kairon-pizzeria.jpg"
+          CAPTION="La tua pizzeria merita un sito che faccia venire fame al primo sguardo. Realizziamo siti web su misura per ristoranti e attivita locali. Vuoi vedere una demo gratuita? Scrivici in DM. #KaironLabsStudio #Pizzeria #SitiWeb #WebDesign"
+
+          PROFILE=$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            "https://graph.instagram.com/me?fields=id,username")
+          IG_USER_ID=$(echo "$PROFILE" | jq -r '.id // empty')
+          test -n "$IG_USER_ID"
+
+          CREATE=$(curl --fail-with-body --silent --show-error \
+            -X POST "https://graph.instagram.com/$IG_USER_ID/media" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "image_url=$IMAGE_URL" \
+            --data-urlencode "caption=$CAPTION")
+          CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
+          test -n "$CREATION_ID"
+
+          PUBLISH=$(curl --fail-with-body --silent --show-error \
+            -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "creation_id=$CREATION_ID")
+          MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
+          test -n "$MEDIA_ID"
+          echo "PHOTO PUBLISHED: $MEDIA_ID"
