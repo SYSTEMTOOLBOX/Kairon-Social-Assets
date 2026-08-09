@@ -1,0 +1,28 @@
+name: Kairon Reel Rescue Now
+
+on:
+  push:
+    paths:
+      - '.github/workflows/reel-rescue-now.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch-main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Avvia subito Kairon Daily Reel
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/reel-daily.yml/dispatches \
+            -d '{"ref":"main"}'
+          echo "Workflow principale avviato manualmente."
