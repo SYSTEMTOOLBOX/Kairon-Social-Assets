@@ -11,12 +11,17 @@ permissions:
 jobs:
   publish-now:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
 
       - name: Build lightweight pizzeria Reel
         shell: bash
@@ -25,8 +30,8 @@ jobs:
           mkdir -p generated
           ffmpeg -y -loop 1 -framerate 30 -i today/kairon-pizzeria.jpg \
             -f lavfi -i anullsrc=r=48000:cl=stereo \
-            -vf "scale=1000:1760:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,fade=t=in:st=0:d=0.3,fade=t=out:st=8.6:d=0.4,format=yuv420p" \
-            -map 0:v -map 1:a -t 9 -r 30 \
+            -filter_complex "[0:v]scale=1000:1760:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,fade=t=in:st=0:d=0.3,fade=t=out:st=8.6:d=0.4,format=yuv420p[v]" \
+            -map "[v]" -map 1:a -t 9 -r 30 \
             -c:v libx264 -preset ultrafast -crf 22 \
             -c:a aac -b:a 96k -movflags +faststart \
             generated/emergency-pizzeria.mp4
@@ -49,7 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           URL="${{ steps.video.outputs.url }}"
-          for i in {1..18}; do
+          for i in {1..24}; do
             if curl -fL --silent --output /dev/null "$URL"; then exit 0; fi
             sleep 5
           done
@@ -69,14 +74,16 @@ jobs:
           CREATE=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media" -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" --data-urlencode "media_type=REELS" --data-urlencode "video_url=$VIDEO_URL" --data-urlencode "caption=$CAPTION" --data-urlencode "share_to_feed=true")
           CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
           test -n "$CREATION_ID"
-          for i in {1..24}; do
+          READY=false
+          for i in {1..30}; do
             STATUS_JSON=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/$CREATION_ID?fields=status_code")
             STATUS=$(echo "$STATUS_JSON" | jq -r '.status_code // empty')
             echo "Instagram status: $STATUS"
-            if [ "$STATUS" = "FINISHED" ]; then break; fi
+            if [ "$STATUS" = "FINISHED" ]; then READY=true; break; fi
             if [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "EXPIRED" ]; then echo "$STATUS_JSON"; exit 1; fi
             sleep 10
           done
+          test "$READY" = "true"
           PUBLISH=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" --data-urlencode "creation_id=$CREATION_ID")
           MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
           test -n "$MEDIA_ID"
