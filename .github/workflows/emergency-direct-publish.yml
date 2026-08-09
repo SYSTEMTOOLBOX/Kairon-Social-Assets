@@ -10,38 +10,45 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
-      - name: Publish pizzeria post and ready Reel
+      - name: Publish ready Reel directly
         shell: bash
         env:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
-          PROFILE=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/me?fields=id,username")
+
+          PROFILE=$(curl --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/me?fields=id,username")
+          echo "$PROFILE"
           IG_USER_ID=$(echo "$PROFILE" | jq -r '.id // empty')
           test -n "$IG_USER_ID"
 
-          IMAGE_URL="https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/main/today/kairon-pizzeria.jpg"
-          POST_CAPTION="La tua pizzeria merita un sito che faccia venire fame al primo sguardo. Realizziamo siti web su misura per ristoranti e attivita locali. Vuoi vedere una demo gratuita? Scrivici in DM. #KaironLabsStudio #Pizzeria #SitiWeb #WebDesign"
-          POST_CREATE=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media" -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" --data-urlencode "image_url=$IMAGE_URL" --data-urlencode "caption=$POST_CAPTION")
-          POST_ID=$(echo "$POST_CREATE" | jq -r '.id // empty')
-          test -n "$POST_ID"
-          POST_PUBLISH=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" --data-urlencode "creation_id=$POST_ID")
-          echo "POST: $POST_PUBLISH"
-
           VIDEO_URL="https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/main/generated/reel-preview.mp4"
-          REEL_CAPTION="Non il solito sito. Kairon Labs Studio trasforma idee in progetti digitali su misura. Demo gratuita: scrivici in DM. #KaironLabsStudio #WebDesign #SitiWeb"
-          CREATE=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media" -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" --data-urlencode "media_type=REELS" --data-urlencode "video_url=$VIDEO_URL" --data-urlencode "caption=$REEL_CAPTION" --data-urlencode "share_to_feed=true")
+          CAPTION="Non il solito sito. Kairon Labs Studio trasforma idee in progetti digitali su misura. Demo gratuita: scrivici in DM. #KaironLabsStudio #WebDesign #SitiWeb"
+
+          CREATE=$(curl --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "media_type=REELS" \
+            --data-urlencode "video_url=$VIDEO_URL" \
+            --data-urlencode "caption=$CAPTION" \
+            --data-urlencode "share_to_feed=true")
+          echo "CREATE: $CREATE"
           CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
           test -n "$CREATION_ID"
+
           READY=false
-          for i in {1..24}; do
-            STATUS_JSON=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/$CREATION_ID?fields=status_code")
+          for i in {1..30}; do
+            STATUS_JSON=$(curl --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/$CREATION_ID?fields=status_code")
             STATUS=$(echo "$STATUS_JSON" | jq -r '.status_code // empty')
-            echo "Instagram Reel status: $STATUS"
+            echo "STATUS: $STATUS_JSON"
             if [ "$STATUS" = "FINISHED" ]; then READY=true; break; fi
-            if [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "EXPIRED" ]; then echo "$STATUS_JSON"; exit 1; fi
-            sleep 10
+            if [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "EXPIRED" ]; then exit 1; fi
+            sleep 8
           done
           test "$READY" = "true"
-          REEL_PUBLISH=$(curl --fail-with-body --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" --data-urlencode "creation_id=$CREATION_ID")
-          echo "REEL: $REEL_PUBLISH"
+
+          PUBLISH=$(curl --silent --show-error -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "creation_id=$CREATION_ID")
+          echo "PUBLISH: $PUBLISH"
+          MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
+          test -n "$MEDIA_ID"
