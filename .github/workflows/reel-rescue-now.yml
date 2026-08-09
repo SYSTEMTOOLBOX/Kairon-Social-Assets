@@ -6,23 +6,134 @@ on:
       - '.github/workflows/reel-rescue-now.yml'
 
 permissions:
-  actions: write
-  contents: read
+  contents: write
 
 jobs:
-  dispatch-main:
+  rescue-publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
-      - name: Avvia subito Kairon Daily Reel
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scarica repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepara strumenti
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core jq
+
+      - name: Verifica visual pizzeria
         run: |
           set -euo pipefail
-          curl --fail-with-body --silent --show-error \
-            -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/reel-daily.yml/dispatches \
-            -d '{"ref":"main"}'
-          echo "Workflow principale avviato manualmente."
+          test -f today/kairon-pizzeria.jpg
+          mkdir -p generated state
+
+      - name: Crea Reel rapido
+        shell: bash
+        run: |
+          set -euo pipefail
+          FONT="/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+          ffmpeg -y \
+            -loop 1 -framerate 30 -i today/kairon-pizzeria.jpg \
+            -f lavfi -i anullsrc=r=48000:cl=stereo \
+            -filter_complex "[0:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,drawtext=fontfile=${FONT}:text='SITO WEB PER PIZZERIA':fontcolor=0xF6D36B:fontsize=58:x=(w-text_w)/2:y=150,drawtext=fontfile=${FONT}:text='IL TUO LOCALE. ONLINE.':fontcolor=white:fontsize=38:x=(w-text_w)/2:y=240,drawtext=fontfile=${FONT}:text='KAIRON LABS STUDIO':fontcolor=0xF6D36B:fontsize=34:x=(w-text_w)/2:y=h-255,drawtext=fontfile=${FONT}:text='DEMO GRATUITA - LINK IN BIO':fontcolor=white:fontsize=34:x=(w-text_w)/2:y=h-185,fade=t=in:st=0:d=0.25,fade=t=out:st=8.6:d=0.4,format=yuv420p[video]" \
+            -map "[video]" -map 1:a \
+            -t 9 -r 30 \
+            -c:v libx264 -preset ultrafast -crf 20 \
+            -c:a aac -b:a 96k \
+            -movflags +faststart \
+            generated/reel-rescue-pizzeria.mp4
+          test -s generated/reel-rescue-pizzeria.mp4
+
+      - name: Pubblica video su GitHub
+        id: video
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Kairon Auto Social"
+          git config user.email "kaironlabsstudio@gmail.com"
+          git add generated/reel-rescue-pizzeria.mp4
+          git commit -m "Emergency Kairon pizzeria Reel" || true
+          git push
+          VIDEO_COMMIT=$(git rev-parse HEAD)
+          VIDEO_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${VIDEO_COMMIT}/generated/reel-rescue-pizzeria.mp4"
+          echo "url=$VIDEO_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Attendi disponibilita video
+        shell: bash
+        run: |
+          set -euo pipefail
+          VIDEO_URL="${{ steps.video.outputs.url }}"
+          for i in {1..20}; do
+            if curl -fL --silent --output /dev/null "$VIDEO_URL"; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+      - name: Pubblica Reel Instagram
+        shell: bash
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          VIDEO_URL: ${{ steps.video.outputs.url }}
+        run: |
+          set -euo pipefail
+          CAPTION="Un sito che fa venire fame prima ancora di leggere il menu. Demo sito web per pizzeria by Kairon Labs Studio. Vuoi vedere come potrebbe essere il tuo? Scrivici in DM. #KaironLabsStudio #Pizzeria #SitiWeb #WebDesign"
+
+          PROFILE=$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            "https://graph.instagram.com/me?fields=id,username")
+          IG_USER_ID=$(echo "$PROFILE" | jq -r '.id // empty')
+          test -n "$IG_USER_ID"
+
+          CREATE=$(curl --fail-with-body --silent --show-error \
+            -X POST "https://graph.instagram.com/$IG_USER_ID/media" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "media_type=REELS" \
+            --data-urlencode "video_url=$VIDEO_URL" \
+            --data-urlencode "caption=$CAPTION" \
+            --data-urlencode "share_to_feed=true")
+
+          CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
+          test -n "$CREATION_ID"
+
+          READY=false
+          for i in {1..24}; do
+            STATUS_JSON=$(curl --fail-with-body --silent --show-error \
+              -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+              "https://graph.instagram.com/$CREATION_ID?fields=status_code")
+            STATUS=$(echo "$STATUS_JSON" | jq -r '.status_code // empty')
+            if [ "$STATUS" = "FINISHED" ]; then
+              READY=true
+              break
+            fi
+            if [ "$STATUS" = "ERROR" ] || [ "$STATUS" = "EXPIRED" ]; then
+              echo "$STATUS_JSON"
+              exit 1
+            fi
+            sleep 10
+          done
+          [ "$READY" = "true" ]
+
+          PUBLISH=$(curl --fail-with-body --silent --show-error \
+            -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "creation_id=$CREATION_ID")
+          MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
+          test -n "$MEDIA_ID"
+          echo "PUBBLICATO Media ID: $MEDIA_ID"
+          echo "$MEDIA_ID" > state/instagram-pizzeria-2026-08-09.txt
+
+      - name: Consuma contenuto di oggi
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Kairon Auto Social"
+          git config user.email "kaironlabsstudio@gmail.com"
+          git rm -f today/kairon-pizzeria.jpg
+          git add state/instagram-pizzeria-2026-08-09.txt
+          git commit -m "Mark pizzeria Reel published" || true
+          git push
