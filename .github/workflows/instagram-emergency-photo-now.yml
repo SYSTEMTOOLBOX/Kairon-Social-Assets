@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - '.github/workflows/instagram-emergency-photo-now.yml'
-      - 'today/kairon-pizzeria.jpg'
 
 permissions:
   contents: read
@@ -20,7 +19,7 @@ jobs:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
-          IMAGE_URL="https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/main/today/kairon-pizzeria.jpg"
+          IMAGE_URL="https://raw.githubusercontent.com/SYSTEMTOOLBOX/Kairon-Social-Assets/8f077149d3c0053231723b576e9af9ad7b72a8ae/today/kairon-pizzeria.jpg"
           CAPTION="La tua pizzeria merita un sito che faccia venire fame al primo sguardo. Realizziamo siti web su misura per ristoranti e attivita locali. Vuoi vedere una demo gratuita? Scrivici in DM. #KaironLabsStudio #Pizzeria #SitiWeb #WebDesign"
 
           PROFILE=$(curl --silent --show-error -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" "https://graph.instagram.com/me?fields=id,username")
