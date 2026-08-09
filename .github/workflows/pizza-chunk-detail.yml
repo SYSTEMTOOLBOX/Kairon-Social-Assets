@@ -1,0 +1,25 @@
+name: Pizza Chunk Detail
+on:
+  push:
+    paths:
+      - '.github/workflows/pizza-chunk-detail.yml'
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate bad 500-char segments
+        shell: bash
+        run: |
+          set -euo pipefail
+          h1=(9e6077887b1783e0b2c92d67d4ab52924953eee14c75423173bec61b81c49688 39b8d3a9ec6e5be4f770f383e811ba64531d407e9cd7e09aa91d5686de437698 79b019ee756434a3d983fdf05705c28fefa16002d00a0713f15f2ff0b4884a37 a540907f13f909005a25e5d4b25d944a848cd31a08671bb43bf0b411aa18bce7 b96cf9cd89203aaa9f4e82542db736e5eb7d3b7f95684bcc4afa68e7c5cb65dd 4d51bda2f8154318148b21f70c8612cc04a04d02e6026f51cb46b8da17421f3a 2a3e53e65d7937bbc4a94b29b6e260301f72197354c5431ae52495a41aec0812 4f0e827f015456d0ebbf1e5869d244a065f316a23a2b75201ac4b1cc84b941b5 d19042799b709d459b20b26b01a0de329540ea58180ced645dd63ca7df3d8c95 c49409c00f9cc12ec48e6f88b0f635812783c05e611db54faa8496b756d86656)
+          h6=(63b5b8d09b056811fd0bb98fb7716a7197ce3f720d304790d05f6388160c8a0f cee17c30ef67178df1d3851f66dc1e7b6688a7b9a2d41184517ab29e6c81c134 44a66e39ed64cf2667783081ef8b6fe3c72061a461b9667cc9df7a6363346fcc c657be7c33f0a154a8fd23d7dfe16a3f8bb5dd1e35d43ced7d7d1178f371bbde 896550f0677ee82809e4065a0d388abbd185cd32eafa457ab7d739015a7b404f e138106298d35f9bf4a98c9fc542fe6d0ea17b95dff38342c9afec6b0aec29b0 5dfafe2544c3bd4d1f083d36b1fccaf197cb064515752b808a314e0e37d69e76 8293551ac9ae9df01444ab8ffc9f90713c8eccaab1b0f236e8c13001f510da8a 2416812fa5c787a50951c0b469071a3c881fc50e1a310aad91f20b877757d813 c8a4fe19bfc7c17fed719099a4f8da90d73e48b3b192cb38ed0ddf3f7cc408d4)
+          for n in 01 06; do
+            f="tmp/pizza_b64_${n}.txt"
+            echo "WHOLE $n $(sha256sum "$f" | cut -d' ' -f1)"
+            for j in {0..9}; do
+              got=$(dd if="$f" bs=1 skip=$((j*500)) count=500 status=none | sha256sum | cut -d' ' -f1)
+              if [ "$n" = 01 ]; then exp=${h1[$j]}; else exp=${h6[$j]}; fi
+              [ "$got" = "$exp" ] && echo "OK $n:$j" || echo "BAD $n:$j got=$got exp=$exp"
+            done
+          done
