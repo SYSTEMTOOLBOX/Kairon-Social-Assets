@@ -89,3 +89,5 @@ jobs:
           MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
           test -n "$MEDIA_ID"
           echo "PIZZA REEL PUBLISHED: $MEDIA_ID"
+
+# retry after exact chunk repair
