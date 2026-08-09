@@ -1,0 +1,39 @@
+name: Pizza Chunk Check
+
+on:
+  push:
+    paths:
+      - '.github/workflows/pizza-chunk-check.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check exact chunks
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected=(
+            fc701177d7ace933d631fd0d64368ae68a02fb3629cf176af67f3e1523b0a36f
+            b4959ec73d94f42241b2f158e5c27ed290eb94964a5d9652a8d3851370da8123
+            e18a02cd887da03a4fccfb68d69675c9ad0b80b1186feb696ffb87472fa820ce
+            0026a831e892533ef458ed2163df1598847cc55aa842fe2c090dc7ef421507fc
+            3e58c320a582c04e550082eb4f98f02ef66ff11a89cbcf3f0c6a5f9158aff42b
+            038f98e1dc2eacb0c018d4f5b314b1d4793da566476c576de5d0e8d44896a440
+            0a50b27c9b4739f4efa787a3f932d8ffb83c31a61761bd3c4a314305c07ee793
+            b14c6caace5d66318902e5acb2f3f486d01b458404855c0c771f63d386bea69d
+          )
+          bad=0
+          for n in 01 02 03 04 05 06 07 08; do
+            idx=$((10#$n - 1))
+            f="tmp/pizza_b64_${n}.txt"
+            len=$(wc -c < "$f" | tr -d ' ')
+            hash=$(sha256sum "$f" | awk '{print $1}')
+            echo "CHUNK $n len=$len hash=$hash expected=${expected[$idx]}"
+            if [ "$hash" != "${expected[$idx]}" ]; then
+              echo "BAD_CHUNK=$n"
+              bad=1
+            fi
+          done
+          exit $bad
