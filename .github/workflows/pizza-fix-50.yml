@@ -1,0 +1,34 @@
+name: Fix Pizza Exact 50
+on:
+  push:
+    paths:
+      - '.github/workflows/pizza-fix-50.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fix exact corrupt 50 chars
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tmp/pizza_b64_06.txt')
+          s=''.join(p.read_text().split())
+          assert len(s)==5000
+          good='pn/ZcD0gNJ0Urls18UVNRwe40EQUQH2s/aoUQxuWSXfr5z42vP'
+          assert len(good)==50
+          s=s[:3300]+good+s[3350:]
+          p.write_text(s)
+          PY
+          echo "038f98e1dc2eacb0c018d4f5b314b1d4793da566476c576de5d0e8d44896a440  tmp/pizza_b64_06.txt" | sha256sum -c -
+          git config user.name "Kairon Auto Social"
+          git config user.email "kaironlabsstudio@gmail.com"
+          git add tmp/pizza_b64_06.txt
+          git commit -m "Fix exact pizza video bytes"
+          git push
