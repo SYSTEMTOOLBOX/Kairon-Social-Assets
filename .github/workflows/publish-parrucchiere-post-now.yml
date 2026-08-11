@@ -4,13 +4,20 @@ on:
   push:
     paths:
       - 'approved/parrucchiere-post.jpg'
+      - '.github/workflows/publish-parrucchiere-post-now.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: publish-approved-parrucchiere-post
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Publish approved parrucchiere static post
         shell: bash
@@ -18,17 +25,27 @@ jobs:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
+
           IMAGE_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/approved/parrucchiere-post.jpg"
-          echo "Waiting for approved image: $IMAGE_URL"
-          for i in {1..24}; do
-            if curl -fL --silent --output /dev/null "$IMAGE_URL"; then break; fi
+          echo "Approved image: $IMAGE_URL"
+
+          # Verify the exact image is publicly reachable before asking Instagram to ingest it.
+          for i in {1..12}; do
+            HTTP=$(curl -L -sS -o /tmp/post.jpg -w '%{http_code}' "$IMAGE_URL" || true)
+            SIZE=$(wc -c </tmp/post.jpg 2>/dev/null || echo 0)
+            echo "Image check $i: HTTP=$HTTP bytes=$SIZE"
+            if [ "$HTTP" = "200" ] && [ "$SIZE" -gt 10000 ]; then
+              break
+            fi
             sleep 5
           done
-          curl -fL --silent --output /dev/null "$IMAGE_URL"
+          test "$(wc -c </tmp/post.jpg)" -gt 10000
+          file /tmp/post.jpg
 
-          PROFILE=$(curl --fail-with-body --silent --show-error \
+          PROFILE=$(curl -sS \
             -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
             "https://graph.instagram.com/me?fields=id,username")
+          echo "Instagram profile response: $PROFILE"
           IG_USER_ID=$(echo "$PROFILE" | jq -r '.id // empty')
           USERNAME=$(echo "$PROFILE" | jq -r '.username // empty')
           test -n "$IG_USER_ID"
@@ -36,18 +53,38 @@ jobs:
 
           CAPTION='Sito web per parrucchiere ✂️\n\nUn’immagine professionale online, prenotazioni più semplici e un sito pensato per valorizzare il tuo salone.\n\nRichiedi una demo a Kairon Labs Studio.\n\n#KaironLabsStudio #SitoWeb #Parrucchiere #WebDesign #SitiWeb'
 
-          CREATE=$(curl --fail-with-body --silent --show-error \
-            -X POST "https://graph.instagram.com/$IG_USER_ID/media" \
-            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
-            --data-urlencode "image_url=$IMAGE_URL" \
-            --data-urlencode "caption=$CAPTION")
-          CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
+          CREATION_ID=""
+          for attempt in 1 2 3 4 5; do
+            CODE=$(curl -sS -o /tmp/create.json -w '%{http_code}' \
+              -X POST "https://graph.instagram.com/$IG_USER_ID/media" \
+              -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+              --data-urlencode "image_url=$IMAGE_URL" \
+              --data-urlencode "caption=$CAPTION" || true)
+            BODY=$(cat /tmp/create.json)
+            echo "Create attempt $attempt: HTTP=$CODE response=$BODY"
+            CREATION_ID=$(echo "$BODY" | jq -r '.id // empty' 2>/dev/null || true)
+            if [ -n "$CREATION_ID" ]; then
+              break
+            fi
+            if [ "$attempt" -lt 5 ]; then sleep $((attempt * 15)); fi
+          done
           test -n "$CREATION_ID"
+          echo "Instagram creation id: $CREATION_ID"
 
-          PUBLISH=$(curl --fail-with-body --silent --show-error \
-            -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" \
-            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
-            --data-urlencode "creation_id=$CREATION_ID")
-          MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
+          # Static image containers can normally publish immediately, but retry transient 5xx/API delays.
+          MEDIA_ID=""
+          for attempt in 1 2 3 4 5; do
+            CODE=$(curl -sS -o /tmp/publish.json -w '%{http_code}' \
+              -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" \
+              -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+              --data-urlencode "creation_id=$CREATION_ID" || true)
+            BODY=$(cat /tmp/publish.json)
+            echo "Publish attempt $attempt: HTTP=$CODE response=$BODY"
+            MEDIA_ID=$(echo "$BODY" | jq -r '.id // empty' 2>/dev/null || true)
+            if [ -n "$MEDIA_ID" ]; then
+              break
+            fi
+            if [ "$attempt" -lt 5 ]; then sleep $((attempt * 15)); fi
+          done
           test -n "$MEDIA_ID"
           echo "KAIRON STATIC POST PUBLISHED: $MEDIA_ID"
