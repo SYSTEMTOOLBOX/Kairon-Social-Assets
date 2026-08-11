@@ -1,0 +1,1 @@
+Approved static creatives used by one-shot Instagram publishing workflows.
