@@ -1,0 +1,53 @@
+name: Publish Approved Parrucchiere Post
+
+on:
+  push:
+    paths:
+      - 'approved/parrucchiere-post.jpg'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish approved parrucchiere static post
+        shell: bash
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          IMAGE_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/approved/parrucchiere-post.jpg"
+          echo "Waiting for approved image: $IMAGE_URL"
+          for i in {1..24}; do
+            if curl -fL --silent --output /dev/null "$IMAGE_URL"; then break; fi
+            sleep 5
+          done
+          curl -fL --silent --output /dev/null "$IMAGE_URL"
+
+          PROFILE=$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            "https://graph.instagram.com/me?fields=id,username")
+          IG_USER_ID=$(echo "$PROFILE" | jq -r '.id // empty')
+          USERNAME=$(echo "$PROFILE" | jq -r '.username // empty')
+          test -n "$IG_USER_ID"
+          echo "Publishing approved static post for @$USERNAME"
+
+          CAPTION='Sito web per parrucchiere ✂️\n\nUn’immagine professionale online, prenotazioni più semplici e un sito pensato per valorizzare il tuo salone.\n\nRichiedi una demo a Kairon Labs Studio.\n\n#KaironLabsStudio #SitoWeb #Parrucchiere #WebDesign #SitiWeb'
+
+          CREATE=$(curl --fail-with-body --silent --show-error \
+            -X POST "https://graph.instagram.com/$IG_USER_ID/media" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "image_url=$IMAGE_URL" \
+            --data-urlencode "caption=$CAPTION")
+          CREATION_ID=$(echo "$CREATE" | jq -r '.id // empty')
+          test -n "$CREATION_ID"
+
+          PUBLISH=$(curl --fail-with-body --silent --show-error \
+            -X POST "https://graph.instagram.com/$IG_USER_ID/media_publish" \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            --data-urlencode "creation_id=$CREATION_ID")
+          MEDIA_ID=$(echo "$PUBLISH" | jq -r '.id // empty')
+          test -n "$MEDIA_ID"
+          echo "KAIRON STATIC POST PUBLISHED: $MEDIA_ID"
