@@ -1,0 +1,32 @@
+name: Verify Last Instagram Post
+
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-last-instagram-post.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify published media object
+        shell: bash
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          MEDIA_ID="17985802836016871"
+          RESP=$(curl -sS \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            "https://graph.instagram.com/$MEDIA_ID?fields=id,media_type,media_url,permalink,timestamp,username")
+          echo "VERIFY_RESPONSE=$RESP"
+          ID=$(echo "$RESP" | jq -r '.id // empty')
+          PERMALINK=$(echo "$RESP" | jq -r '.permalink // empty')
+          test "$ID" = "$MEDIA_ID"
+          test -n "$PERMALINK"
+          echo "VISIBLE_MEDIA_ID=$ID"
+          echo "VISIBLE_PERMALINK=$PERMALINK"
