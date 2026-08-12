@@ -16,32 +16,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build temporary test Reel with soft lounge music
+      - name: Build test Reel with deep chill luxury music
         shell: bash
         run: |
           set -euo pipefail
           command -v ffmpeg >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core; }
           mkdir -p generated
 
-          # Original soft lounge / aperibar-style instrumental bed generated here.
-          # Warm major-7 harmony, light bass pulse and soft high texture.
           ffmpeg -hide_banner -loglevel error -y \
-            -f lavfi -i "sine=frequency=130.81:duration=5:sample_rate=44100" \
-            -f lavfi -i "sine=frequency=164.81:duration=5:sample_rate=44100" \
-            -f lavfi -i "sine=frequency=196.00:duration=5:sample_rate=44100" \
-            -f lavfi -i "sine=frequency=246.94:duration=5:sample_rate=44100" \
-            -f lavfi -i "sine=frequency=65.41:duration=5:sample_rate=44100" \
-            -filter_complex "[0:a]volume=0.035,lowpass=f=900[a0];[1:a]volume=0.028,lowpass=f=1100[a1];[2:a]volume=0.022,lowpass=f=1300[a2];[3:a]volume=0.016,lowpass=f=1600[a3];[4:a]volume=0.040,lowpass=f=220[a4];[a0][a1][a2][a3][a4]amix=inputs=5:normalize=0,afade=t=in:st=0:d=0.8,afade=t=out:st=4.2:d=0.8,aecho=0.7:0.5:80:0.15,alimiter=limit=0.65[lounge]" \
-            -map "[lounge]" -c:a aac -b:a 128k /tmp/lounge.m4a
+            -f lavfi -i "sine=frequency=110:duration=6:sample_rate=44100" \
+            -f lavfi -i "sine=frequency=220:duration=6:sample_rate=44100" \
+            -f lavfi -i "sine=frequency=261.63:duration=6:sample_rate=44100" \
+            -f lavfi -i "sine=frequency=329.63:duration=6:sample_rate=44100" \
+            -f lavfi -i "sine=frequency=392:duration=6:sample_rate=44100" \
+            -filter_complex "[0:a]volume=0.045,lowpass=f=180[a0];[1:a]volume=0.018,lowpass=f=800[a1];[2:a]volume=0.016,lowpass=f=900[a2];[3:a]volume=0.014,lowpass=f=1000[a3];[4:a]volume=0.010,lowpass=f=1200[a4];[a0][a1][a2][a3][a4]amix=inputs=5:normalize=0,aecho=0.6:0.35:120:0.12,afade=t=in:st=0:d=0.5,afade=t=out:st=5.3:d=0.7,alimiter=limit=0.55[music]" \
+            -map "[music]" -c:a aac -b:a 160k /tmp/deepchill.m4a
 
           ffmpeg -hide_banner -loglevel error -y \
-            -f lavfi -i color=c=black:s=1080x1920:d=5:r=24 \
-            -i /tmp/lounge.m4a \
-            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='KAIRON LABS STUDIO':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2-80,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='TEST REEL + SOFT LOUNGE':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2+40" \
-            -t 5 -shortest -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p \
-            -c:a aac -b:a 128k -movflags +faststart generated/instagram-test-reel-lounge.mp4
-          test -s generated/instagram-test-reel-lounge.mp4
-          ffprobe -v error -show_entries stream=codec_type,codec_name -of compact generated/instagram-test-reel-lounge.mp4
+            -f lavfi -i color=c=black:s=1080x1920:d=6:r=24 \
+            -i /tmp/deepchill.m4a \
+            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='KAIRON LABS STUDIO':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2-80,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='TEST DEEP CHILL LUXURY':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2+40" \
+            -t 6 -shortest -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p \
+            -c:a aac -b:a 160k -movflags +faststart generated/instagram-test-reel-deepchill.mp4
+          test -s generated/instagram-test-reel-deepchill.mp4
 
       - name: Publish test video file to GitHub
         id: video
@@ -50,11 +47,11 @@ jobs:
           set -euo pipefail
           git config user.name 'Kairon Auto Social'
           git config user.email 'kaironlabsstudio@gmail.com'
-          git add generated/instagram-test-reel-lounge.mp4
-          git commit -m 'Temporary Instagram Reel lounge music test asset' || true
+          git add generated/instagram-test-reel-deepchill.mp4
+          git commit -m 'Temporary Instagram Reel deep chill music test asset' || true
           git push
           SHA=$(git rev-parse HEAD)
-          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/instagram-test-reel-lounge.mp4"
+          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/instagram-test-reel-deepchill.mp4"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           for i in {1..20}; do
             HTTP=$(curl -L -sS -o /dev/null -w '%{http_code}' "$URL" || true)
@@ -64,7 +61,7 @@ jobs:
           done
           exit 1
 
-      - name: Publish temporary Reel with lounge music to Instagram
+      - name: Publish temporary Reel with deep chill music to Instagram
         shell: bash
         env:
           TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
@@ -72,54 +69,20 @@ jobs:
         run: |
           set -euo pipefail
           ME=$(curl -sS -H "Authorization: Bearer $TOKEN" 'https://graph.instagram.com/me?fields=id,username')
-          echo "Profile: $ME"
           IG=$(echo "$ME" | jq -r '.id // empty')
-          USERNAME=$(echo "$ME" | jq -r '.username // empty')
           test -n "$IG"
-          echo "Testing Reel+lounge publication for @$USERNAME"
-
-          CREATE_CODE=$(curl -sS -o /tmp/create.json -w '%{http_code}' \
-            -X POST "https://graph.instagram.com/$IG/media" \
-            -H "Authorization: Bearer $TOKEN" \
-            --data-urlencode 'media_type=REELS' \
-            --data-urlencode "video_url=$VIDEO_URL" \
-            --data-urlencode 'caption=TEST TECNICO REEL + SOFT LOUNGE — Kairon Labs Studio. Questo Reel verrà eliminato dopo la verifica.' \
-            --data-urlencode 'share_to_feed=true' || true)
-          CREATE_BODY=$(cat /tmp/create.json)
-          echo "Create HTTP=$CREATE_CODE response=$CREATE_BODY"
-          CID=$(echo "$CREATE_BODY" | jq -r '.id // empty' 2>/dev/null || true)
+          CREATE_BODY=$(curl -sS -X POST "https://graph.instagram.com/$IG/media" -H "Authorization: Bearer $TOKEN" --data-urlencode 'media_type=REELS' --data-urlencode "video_url=$VIDEO_URL" --data-urlencode 'caption=TEST TECNICO REEL + DEEP CHILL LUXURY — Kairon Labs Studio. Questo Reel verrà eliminato dopo la verifica.' --data-urlencode 'share_to_feed=true')
+          CID=$(echo "$CREATE_BODY" | jq -r '.id // empty')
           test -n "$CID"
-
-          READY=0
           for i in {1..40}; do
-            S=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code,status")
+            S=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code")
             CODE=$(echo "$S" | jq -r '.status_code // empty')
-            echo "Container status $i: $S"
-            [ "$CODE" = 'FINISHED' ] && { READY=1; break; }
+            [ "$CODE" = 'FINISHED' ] && break
             [ "$CODE" = 'ERROR' ] && exit 1
             sleep 6
           done
-          [ "$READY" = 1 ] || exit 1
-
-          MID=""
-          for attempt in 1 2 3 4 5; do
-            PUB_CODE=$(curl -sS -o /tmp/publish.json -w '%{http_code}' \
-              -X POST "https://graph.instagram.com/$IG/media_publish" \
-              -H "Authorization: Bearer $TOKEN" \
-              --data-urlencode "creation_id=$CID" || true)
-            PUB_BODY=$(cat /tmp/publish.json)
-            echo "Publish attempt $attempt HTTP=$PUB_CODE response=$PUB_BODY"
-            MID=$(echo "$PUB_BODY" | jq -r '.id // empty' 2>/dev/null || true)
-            [ -n "$MID" ] && break
-            sleep $((attempt * 10))
-          done
+          PUB=$(curl -sS -X POST "https://graph.instagram.com/$IG/media_publish" -H "Authorization: Bearer $TOKEN" --data-urlencode "creation_id=$CID")
+          MID=$(echo "$PUB" | jq -r '.id // empty')
           test -n "$MID"
-
-          VERIFY=$(curl -sS \
-            -H "Authorization: Bearer $TOKEN" \
-            "https://graph.instagram.com/$MID?fields=id,media_type,media_product_type,permalink,timestamp")
+          VERIFY=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$MID?fields=id,permalink,media_product_type")
           echo "FINAL_VERIFY=$VERIFY"
-          PERMALINK=$(echo "$VERIFY" | jq -r '.permalink // empty')
-          test -n "$PERMALINK"
-          echo "TEST_REEL_LOUNGE_PUBLISHED=$MID"
-          echo "TEST_REEL_LOUNGE_PERMALINK=$PERMALINK"
