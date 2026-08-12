@@ -16,31 +16,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Rebuild approved Kairon music
-        shell: bash
-        run: |
-          set -euo pipefail
-          base64 -d approved_audio/kairon_intro_approved_16k.mp3.b64 > /tmp/kairon-intro.mp3
-          BYTES=$(wc -c < /tmp/kairon-intro.mp3 | tr -d ' ')
-          SHA=$(sha256sum /tmp/kairon-intro.mp3 | awk '{print $1}')
-          echo "Approved music bytes=$BYTES sha256=$SHA"
-          test "$BYTES" = "9892"
-          test "$SHA" = "ccbd827645177513574fcdcf70ecae01b5952e6a3f555c36d7eb0455690b7ece"
-
-      - name: Build temporary test Reel with approved music
+      - name: Build temporary test Reel with soft lounge music
         shell: bash
         run: |
           set -euo pipefail
           command -v ffmpeg >/dev/null 2>&1 || { sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core; }
           mkdir -p generated
+
+          # Original soft lounge / aperibar-style instrumental bed generated here.
+          # Warm major-7 harmony, light bass pulse and soft high texture.
+          ffmpeg -hide_banner -loglevel error -y \
+            -f lavfi -i "sine=frequency=130.81:duration=5:sample_rate=44100" \
+            -f lavfi -i "sine=frequency=164.81:duration=5:sample_rate=44100" \
+            -f lavfi -i "sine=frequency=196.00:duration=5:sample_rate=44100" \
+            -f lavfi -i "sine=frequency=246.94:duration=5:sample_rate=44100" \
+            -f lavfi -i "sine=frequency=65.41:duration=5:sample_rate=44100" \
+            -filter_complex "[0:a]volume=0.035,lowpass=f=900[a0];[1:a]volume=0.028,lowpass=f=1100[a1];[2:a]volume=0.022,lowpass=f=1300[a2];[3:a]volume=0.016,lowpass=f=1600[a3];[4:a]volume=0.040,lowpass=f=220[a4];[a0][a1][a2][a3][a4]amix=inputs=5:normalize=0,afade=t=in:st=0:d=0.8,afade=t=out:st=4.2:d=0.8,aecho=0.7:0.5:80:0.15,alimiter=limit=0.65[lounge]" \
+            -map "[lounge]" -c:a aac -b:a 128k /tmp/lounge.m4a
+
           ffmpeg -hide_banner -loglevel error -y \
             -f lavfi -i color=c=black:s=1080x1920:d=5:r=24 \
-            -i /tmp/kairon-intro.mp3 \
-            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='KAIRON LABS STUDIO':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2-80,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='TEST REEL + MUSICA APPROVATA':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2+40" \
+            -i /tmp/lounge.m4a \
+            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='KAIRON LABS STUDIO':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2-80,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='TEST REEL + SOFT LOUNGE':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2+40" \
             -t 5 -shortest -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p \
-            -c:a aac -b:a 128k -movflags +faststart generated/instagram-test-reel-music.mp4
-          test -s generated/instagram-test-reel-music.mp4
-          ffprobe -v error -show_entries stream=codec_type,codec_name -of compact generated/instagram-test-reel-music.mp4
+            -c:a aac -b:a 128k -movflags +faststart generated/instagram-test-reel-lounge.mp4
+          test -s generated/instagram-test-reel-lounge.mp4
+          ffprobe -v error -show_entries stream=codec_type,codec_name -of compact generated/instagram-test-reel-lounge.mp4
 
       - name: Publish test video file to GitHub
         id: video
@@ -49,11 +50,11 @@ jobs:
           set -euo pipefail
           git config user.name 'Kairon Auto Social'
           git config user.email 'kaironlabsstudio@gmail.com'
-          git add generated/instagram-test-reel-music.mp4
-          git commit -m 'Temporary Instagram Reel music test asset' || true
+          git add generated/instagram-test-reel-lounge.mp4
+          git commit -m 'Temporary Instagram Reel lounge music test asset' || true
           git push
           SHA=$(git rev-parse HEAD)
-          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/instagram-test-reel-music.mp4"
+          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/instagram-test-reel-lounge.mp4"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           for i in {1..20}; do
             HTTP=$(curl -L -sS -o /dev/null -w '%{http_code}' "$URL" || true)
@@ -63,7 +64,7 @@ jobs:
           done
           exit 1
 
-      - name: Publish temporary Reel with music to Instagram
+      - name: Publish temporary Reel with lounge music to Instagram
         shell: bash
         env:
           TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
@@ -75,14 +76,14 @@ jobs:
           IG=$(echo "$ME" | jq -r '.id // empty')
           USERNAME=$(echo "$ME" | jq -r '.username // empty')
           test -n "$IG"
-          echo "Testing Reel+music publication for @$USERNAME"
+          echo "Testing Reel+lounge publication for @$USERNAME"
 
           CREATE_CODE=$(curl -sS -o /tmp/create.json -w '%{http_code}' \
             -X POST "https://graph.instagram.com/$IG/media" \
             -H "Authorization: Bearer $TOKEN" \
             --data-urlencode 'media_type=REELS' \
             --data-urlencode "video_url=$VIDEO_URL" \
-            --data-urlencode 'caption=TEST TECNICO REEL + MUSICA — Kairon Labs Studio. Questo Reel verrà eliminato dopo la verifica.' \
+            --data-urlencode 'caption=TEST TECNICO REEL + SOFT LOUNGE — Kairon Labs Studio. Questo Reel verrà eliminato dopo la verifica.' \
             --data-urlencode 'share_to_feed=true' || true)
           CREATE_BODY=$(cat /tmp/create.json)
           echo "Create HTTP=$CREATE_CODE response=$CREATE_BODY"
@@ -120,5 +121,5 @@ jobs:
           echo "FINAL_VERIFY=$VERIFY"
           PERMALINK=$(echo "$VERIFY" | jq -r '.permalink // empty')
           test -n "$PERMALINK"
-          echo "TEST_REEL_MUSIC_PUBLISHED=$MID"
-          echo "TEST_REEL_MUSIC_PERMALINK=$PERMALINK"
+          echo "TEST_REEL_LOUNGE_PUBLISHED=$MID"
+          echo "TEST_REEL_LOUNGE_PERMALINK=$PERMALINK"
