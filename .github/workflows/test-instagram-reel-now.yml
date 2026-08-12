@@ -20,12 +20,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d approved_audio/kairon_intro_approved.m4a.b64 > /tmp/kairon-intro.m4a
-          BYTES=$(wc -c < /tmp/kairon-intro.m4a | tr -d ' ')
-          SHA=$(sha256sum /tmp/kairon-intro.m4a | awk '{print $1}')
+          base64 -d approved_audio/kairon_intro_approved_16k.mp3.b64 > /tmp/kairon-intro.mp3
+          BYTES=$(wc -c < /tmp/kairon-intro.mp3 | tr -d ' ')
+          SHA=$(sha256sum /tmp/kairon-intro.mp3 | awk '{print $1}')
           echo "Approved music bytes=$BYTES sha256=$SHA"
-          test "$BYTES" = "84938"
-          test "$SHA" = "9be17409bc85742c4a8d55bf3adc9ec7acd12d76eba5d0c9dcf19f8726cdb5b4"
+          test "$BYTES" = "10780"
+          test "$SHA" = "93850db0c6dbf8a0a66dc178de111be5287274d3e922878c5b381c7c5f686910"
 
       - name: Build temporary test Reel with approved music
         shell: bash
@@ -35,7 +35,7 @@ jobs:
           mkdir -p generated
           ffmpeg -hide_banner -loglevel error -y \
             -f lavfi -i color=c=black:s=1080x1920:d=5:r=24 \
-            -i /tmp/kairon-intro.m4a \
+            -i /tmp/kairon-intro.mp3 \
             -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='KAIRON LABS STUDIO':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2-80,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='TEST REEL + MUSICA APPROVATA':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2+40" \
             -t 5 -shortest -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p \
             -c:a aac -b:a 128k -movflags +faststart generated/instagram-test-reel-music.mp4
