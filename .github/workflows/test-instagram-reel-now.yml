@@ -16,7 +16,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build temporary test Reel
+      - name: Rebuild approved Kairon music
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d approved_audio/kairon_intro_approved.m4a.b64 > /tmp/kairon-intro.m4a
+          BYTES=$(wc -c < /tmp/kairon-intro.m4a | tr -d ' ')
+          SHA=$(sha256sum /tmp/kairon-intro.m4a | awk '{print $1}')
+          echo "Approved music bytes=$BYTES sha256=$SHA"
+          test "$BYTES" = "84938"
+          test "$SHA" = "9be17409bc85742c4a8d55bf3adc9ec7acd12d76eba5d0c9dcf19f8726cdb5b4"
+
+      - name: Build temporary test Reel with approved music
         shell: bash
         run: |
           set -euo pipefail
@@ -24,11 +35,12 @@ jobs:
           mkdir -p generated
           ffmpeg -hide_banner -loglevel error -y \
             -f lavfi -i color=c=black:s=1080x1920:d=5:r=24 \
-            -f lavfi -i anullsrc=r=44100:cl=stereo \
-            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='KAIRON LABS STUDIO':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2-80,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='TEST TECNICO REEL':fontcolor=white:fontsize=44:x=(w-text_w)/2:y=(h-text_h)/2+40" \
+            -i /tmp/kairon-intro.m4a \
+            -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='KAIRON LABS STUDIO':fontcolor=white:fontsize=72:x=(w-text_w)/2:y=(h-text_h)/2-80,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='TEST REEL + MUSICA APPROVATA':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=(h-text_h)/2+40" \
             -t 5 -shortest -c:v libx264 -preset veryfast -crf 24 -pix_fmt yuv420p \
-            -c:a aac -b:a 64k -movflags +faststart generated/instagram-test-reel.mp4
-          test -s generated/instagram-test-reel.mp4
+            -c:a aac -b:a 128k -movflags +faststart generated/instagram-test-reel-music.mp4
+          test -s generated/instagram-test-reel-music.mp4
+          ffprobe -v error -show_entries stream=codec_type,codec_name -of compact generated/instagram-test-reel-music.mp4
 
       - name: Publish test video file to GitHub
         id: video
@@ -37,11 +49,11 @@ jobs:
           set -euo pipefail
           git config user.name 'Kairon Auto Social'
           git config user.email 'kaironlabsstudio@gmail.com'
-          git add generated/instagram-test-reel.mp4
-          git commit -m 'Temporary Instagram Reel test asset' || true
+          git add generated/instagram-test-reel-music.mp4
+          git commit -m 'Temporary Instagram Reel music test asset' || true
           git push
           SHA=$(git rev-parse HEAD)
-          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/instagram-test-reel.mp4"
+          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/instagram-test-reel-music.mp4"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           for i in {1..20}; do
             HTTP=$(curl -L -sS -o /dev/null -w '%{http_code}' "$URL" || true)
@@ -51,7 +63,7 @@ jobs:
           done
           exit 1
 
-      - name: Publish temporary Reel to Instagram
+      - name: Publish temporary Reel with music to Instagram
         shell: bash
         env:
           TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
@@ -63,14 +75,14 @@ jobs:
           IG=$(echo "$ME" | jq -r '.id // empty')
           USERNAME=$(echo "$ME" | jq -r '.username // empty')
           test -n "$IG"
-          echo "Testing Reel publication for @$USERNAME"
+          echo "Testing Reel+music publication for @$USERNAME"
 
           CREATE_CODE=$(curl -sS -o /tmp/create.json -w '%{http_code}' \
             -X POST "https://graph.instagram.com/$IG/media" \
             -H "Authorization: Bearer $TOKEN" \
             --data-urlencode 'media_type=REELS' \
             --data-urlencode "video_url=$VIDEO_URL" \
-            --data-urlencode 'caption=TEST TECNICO — Kairon Labs Studio. Questo Reel verrà eliminato dopo la verifica.' \
+            --data-urlencode 'caption=TEST TECNICO REEL + MUSICA — Kairon Labs Studio. Questo Reel verrà eliminato dopo la verifica.' \
             --data-urlencode 'share_to_feed=true' || true)
           CREATE_BODY=$(cat /tmp/create.json)
           echo "Create HTTP=$CREATE_CODE response=$CREATE_BODY"
@@ -108,5 +120,5 @@ jobs:
           echo "FINAL_VERIFY=$VERIFY"
           PERMALINK=$(echo "$VERIFY" | jq -r '.permalink // empty')
           test -n "$PERMALINK"
-          echo "TEST_REEL_PUBLISHED=$MID"
-          echo "TEST_REEL_PERMALINK=$PERMALINK"
+          echo "TEST_REEL_MUSIC_PUBLISHED=$MID"
+          echo "TEST_REEL_MUSIC_PERMALINK=$PERMALINK"
