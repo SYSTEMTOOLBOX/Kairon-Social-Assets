@@ -12,7 +12,7 @@ permissions:
 jobs:
   test-reel:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -61,7 +61,7 @@ jobs:
           done
           exit 1
 
-      - name: Publish temporary Reel with deep chill music to Instagram
+      - name: Publish Reel and verify it really remains visible
         shell: bash
         env:
           TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
@@ -70,19 +70,68 @@ jobs:
           set -euo pipefail
           ME=$(curl -sS -H "Authorization: Bearer $TOKEN" 'https://graph.instagram.com/me?fields=id,username')
           IG=$(echo "$ME" | jq -r '.id // empty')
+          USERNAME=$(echo "$ME" | jq -r '.username // empty')
           test -n "$IG"
-          CREATE_BODY=$(curl -sS -X POST "https://graph.instagram.com/$IG/media" -H "Authorization: Bearer $TOKEN" --data-urlencode 'media_type=REELS' --data-urlencode "video_url=$VIDEO_URL" --data-urlencode 'caption=TEST TECNICO REEL + DEEP CHILL LUXURY — Kairon Labs Studio. Questo Reel verrà eliminato dopo la verifica.' --data-urlencode 'share_to_feed=true')
-          CID=$(echo "$CREATE_BODY" | jq -r '.id // empty')
-          test -n "$CID"
-          for i in {1..40}; do
-            S=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code")
-            CODE=$(echo "$S" | jq -r '.status_code // empty')
-            [ "$CODE" = 'FINISHED' ] && break
-            [ "$CODE" = 'ERROR' ] && exit 1
-            sleep 6
+          echo "Publishing to @$USERNAME"
+
+          for cycle in 1 2 3; do
+            echo "=== PUBLISH CYCLE $cycle ==="
+            CREATE_BODY=$(curl -sS -X POST "https://graph.instagram.com/$IG/media" \
+              -H "Authorization: Bearer $TOKEN" \
+              --data-urlencode 'media_type=REELS' \
+              --data-urlencode "video_url=$VIDEO_URL" \
+              --data-urlencode 'caption=TEST TECNICO REEL — Kairon Labs Studio. Verifica pubblicazione reale.' \
+              --data-urlencode 'share_to_feed=true')
+            echo "CREATE=$CREATE_BODY"
+            CID=$(echo "$CREATE_BODY" | jq -r '.id // empty')
+            test -n "$CID"
+
+            READY=0
+            for i in {1..40}; do
+              S=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code")
+              CODE=$(echo "$S" | jq -r '.status_code // empty')
+              echo "Container $i: $CODE"
+              [ "$CODE" = 'FINISHED' ] && { READY=1; break; }
+              [ "$CODE" = 'ERROR' ] && break
+              sleep 6
+            done
+            [ "$READY" = 1 ] || { echo "Container failed; retrying cycle"; sleep 10; continue; }
+
+            MID=""
+            for p in 1 2 3 4 5; do
+              PUB=$(curl -sS -X POST "https://graph.instagram.com/$IG/media_publish" \
+                -H "Authorization: Bearer $TOKEN" \
+                --data-urlencode "creation_id=$CID" || true)
+              echo "PUBLISH_$p=$PUB"
+              MID=$(echo "$PUB" | jq -r '.id // empty')
+              [ -n "$MID" ] && break
+              sleep $((p * 8))
+            done
+            [ -n "$MID" ] || { echo "No media id; retrying cycle"; sleep 10; continue; }
+
+            echo "Published candidate MID=$MID. Waiting for real visibility..."
+            VERIFIED=0
+            for check in 1 2 3 4 5 6; do
+              sleep 15
+              OBJ=$(curl -sS -H "Authorization: Bearer $TOKEN" \
+                "https://graph.instagram.com/$MID?fields=id,media_product_type,permalink,timestamp" || true)
+              RECENT=$(curl -sS -H "Authorization: Bearer $TOKEN" \
+                "https://graph.instagram.com/$IG/media?fields=id,media_type,media_product_type,permalink,timestamp&limit=20" || true)
+              OBJ_ID=$(echo "$OBJ" | jq -r '.id // empty' 2>/dev/null || true)
+              LINK=$(echo "$OBJ" | jq -r '.permalink // empty' 2>/dev/null || true)
+              FOUND=$(echo "$RECENT" | jq -r --arg MID "$MID" '[.data[]?.id == $MID] | any' 2>/dev/null || echo false)
+              echo "VERIFY_$check object=$OBJ_ID found_recent=$FOUND permalink=$LINK"
+              if [ "$OBJ_ID" = "$MID" ] && [ "$FOUND" = "true" ] && [ -n "$LINK" ]; then
+                VERIFIED=1
+                echo "REEL_CONFIRMED_VISIBLE=$MID"
+                echo "REEL_PERMALINK=$LINK"
+                break
+              fi
+            done
+
+            [ "$VERIFIED" = 1 ] && exit 0
+            echo "Candidate disappeared/not visible. Retrying from scratch..."
           done
-          PUB=$(curl -sS -X POST "https://graph.instagram.com/$IG/media_publish" -H "Authorization: Bearer $TOKEN" --data-urlencode "creation_id=$CID")
-          MID=$(echo "$PUB" | jq -r '.id // empty')
-          test -n "$MID"
-          VERIFY=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$MID?fields=id,permalink,media_product_type")
-          echo "FINAL_VERIFY=$VERIFY"
+
+          echo "ERROR: Reel was never confirmed visible after retries"
+          exit 1
