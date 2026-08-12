@@ -1,0 +1,113 @@
+name: Publish Approved Gioielleria Now
+
+on:
+  push:
+    paths:
+      - '.github/workflows/publish-approved-gioielleria-now.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-approved-gioielleria-now
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rebuild exact approved Gioielleria image
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat approved/gioielleria_chunks/chunk*.txt | tr -d '\r\n' | base64 -d > /tmp/gioielleria-approved.jpg
+          BYTES=$(wc -c < /tmp/gioielleria-approved.jpg | tr -d ' ')
+          HASH=$(sha256sum /tmp/gioielleria-approved.jpg | awk '{print $1}')
+          echo "IMAGE_BYTES=$BYTES"
+          echo "IMAGE_SHA256=$HASH"
+          test "$BYTES" = "34068"
+          test "$HASH" = "358845186a63be45cd90054ef7e187987aff9cb276ec6819586fac383ac05e16"
+          file /tmp/gioielleria-approved.jpg
+
+      - name: Publish approved image file to GitHub
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p approved
+          cp /tmp/gioielleria-approved.jpg approved/gioielleria-post.jpg
+          git config user.name 'Kairon Auto Social'
+          git config user.email 'kaironlabsstudio@gmail.com'
+          git add approved/gioielleria-post.jpg
+          git commit -m 'Add approved Gioielleria Instagram post' || true
+          git push
+          SHA=$(git rev-parse HEAD)
+          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/approved/gioielleria-post.jpg"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          for i in {1..20}; do
+            HTTP=$(curl -L -sS -o /tmp/check.jpg -w '%{http_code}' "$URL" || true)
+            if [ "$HTTP" = "200" ]; then
+              HASH=$(sha256sum /tmp/check.jpg | awk '{print $1}')
+              [ "$HASH" = "358845186a63be45cd90054ef7e187987aff9cb276ec6819586fac383ac05e16" ] && exit 0
+            fi
+            sleep 3
+          done
+          exit 1
+
+      - name: Publish approved Gioielleria post to Instagram and verify
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          IMAGE_URL: ${{ steps.image.outputs.url }}
+        run: |
+          set -euo pipefail
+          ME=$(curl -sS -H "Authorization: Bearer $TOKEN" 'https://graph.instagram.com/me?fields=id,username')
+          IG=$(echo "$ME" | jq -r '.id // empty')
+          USERNAME=$(echo "$ME" | jq -r '.username // empty')
+          test -n "$IG"
+          test "$USERNAME" = 'kaironlabsstudio'
+
+          CAPTION=$'Sito web per gioielleria ✨\n\nEleganza, sicurezza e prestigio online. Catalogo digitale, vetrina online e contatti rapidi per valorizzare il tuo brand.\n\nRichiedi una demo a Kairon Labs Studio.\n\n#KaironLabsStudio #Gioielleria #SitoWeb #WebDesign #SitiWeb #VetrinaOnline'
+
+          CREATE=$(curl -sS -X POST "https://graph.instagram.com/$IG/media" \
+            -H "Authorization: Bearer $TOKEN" \
+            --data-urlencode "image_url=$IMAGE_URL" \
+            --data-urlencode "caption=$CAPTION")
+          echo "CREATE=$CREATE"
+          CID=$(echo "$CREATE" | jq -r '.id // empty')
+          test -n "$CID"
+
+          MID=''
+          for attempt in 1 2 3 4 5; do
+            PUB=$(curl -sS -X POST "https://graph.instagram.com/$IG/media_publish" \
+              -H "Authorization: Bearer $TOKEN" \
+              --data-urlencode "creation_id=$CID")
+            echo "PUBLISH_ATTEMPT_${attempt}=$PUB"
+            MID=$(echo "$PUB" | jq -r '.id // empty')
+            [ -n "$MID" ] && break
+            sleep $((attempt * 8))
+          done
+          test -n "$MID"
+
+          OK=0
+          for i in {1..25}; do
+            RECENT=$(curl -sS -H "Authorization: Bearer $TOKEN" \
+              "https://graph.instagram.com/$IG/media?fields=id,media_type,media_product_type,permalink,timestamp,caption&limit=10")
+            FOUND=$(echo "$RECENT" | jq -r --arg MID "$MID" '[.data[]?.id == $MID] | any')
+            if [ "$FOUND" = 'true' ]; then
+              LINK=$(echo "$RECENT" | jq -r --arg MID "$MID" '.data[] | select(.id==$MID) | .permalink')
+              TYPE=$(echo "$RECENT" | jq -r --arg MID "$MID" '.data[] | select(.id==$MID) | .media_type')
+              test "$TYPE" = 'IMAGE'
+              test -n "$LINK"
+              echo "VISIBLE_POST_ID=$MID"
+              echo "VISIBLE_POST_PERMALINK=$LINK"
+              OK=1
+              break
+            fi
+            sleep 6
+          done
+          [ "$OK" = 1 ]
