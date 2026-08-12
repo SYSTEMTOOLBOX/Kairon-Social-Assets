@@ -24,8 +24,8 @@ jobs:
           BYTES=$(wc -c < /tmp/kairon-intro.mp3 | tr -d ' ')
           SHA=$(sha256sum /tmp/kairon-intro.mp3 | awk '{print $1}')
           echo "Approved music bytes=$BYTES sha256=$SHA"
-          test "$BYTES" = "10780"
-          test "$SHA" = "93850db0c6dbf8a0a66dc178de111be5287274d3e922878c5b381c7c5f686910"
+          test "$BYTES" = "9892"
+          test "$SHA" = "ccbd827645177513574fcdcf70ecae01b5952e6a3f555c36d7eb0455690b7ece"
 
       - name: Build temporary test Reel with approved music
         shell: bash
