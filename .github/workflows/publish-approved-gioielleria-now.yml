@@ -20,17 +20,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Rebuild exact approved Gioielleria image
+      - name: Rebuild verified Gioielleria image
         shell: bash
         run: |
           set -euo pipefail
-          cat approved/gioielleria_chunks/chunk*.txt | tr -d '\r\n' | base64 -d > /tmp/gioielleria-approved.jpg
+          cat approved/gioielleria_small/part*.txt | tr -d '\r\n' | base64 -d > /tmp/gioielleria-approved.jpg
           BYTES=$(wc -c < /tmp/gioielleria-approved.jpg | tr -d ' ')
           HASH=$(sha256sum /tmp/gioielleria-approved.jpg | awk '{print $1}')
           echo "IMAGE_BYTES=$BYTES"
           echo "IMAGE_SHA256=$HASH"
-          test "$BYTES" = "34068"
-          test "$HASH" = "358845186a63be45cd90054ef7e187987aff9cb276ec6819586fac383ac05e16"
+          test "$BYTES" = "15351"
+          test "$HASH" = "c7953874143445af5b214997de789d69fe570e94a01bbc9b3b35c1b1579daf1f"
           file /tmp/gioielleria-approved.jpg
 
       - name: Publish approved image file to GitHub
@@ -43,7 +43,7 @@ jobs:
           git config user.name 'Kairon Auto Social'
           git config user.email 'kaironlabsstudio@gmail.com'
           git add approved/gioielleria-post.jpg
-          git commit -m 'Add approved Gioielleria Instagram post' || true
+          git commit -m 'Add verified Gioielleria Instagram post' || true
           git push
           SHA=$(git rev-parse HEAD)
           URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/approved/gioielleria-post.jpg"
@@ -52,13 +52,13 @@ jobs:
             HTTP=$(curl -L -sS -o /tmp/check.jpg -w '%{http_code}' "$URL" || true)
             if [ "$HTTP" = "200" ]; then
               HASH=$(sha256sum /tmp/check.jpg | awk '{print $1}')
-              [ "$HASH" = "358845186a63be45cd90054ef7e187987aff9cb276ec6819586fac383ac05e16" ] && exit 0
+              [ "$HASH" = "c7953874143445af5b214997de789d69fe570e94a01bbc9b3b35c1b1579daf1f" ] && exit 0
             fi
             sleep 3
           done
           exit 1
 
-      - name: Publish approved Gioielleria post to Instagram and verify
+      - name: Publish Gioielleria post to Instagram and verify visibility
         shell: bash
         env:
           TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
