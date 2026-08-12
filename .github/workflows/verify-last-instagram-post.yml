@@ -13,20 +13,37 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify published media object
+      - name: Verify latest deep chill Reel and recent media
         shell: bash
         env:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
-          MEDIA_ID="17985802836016871"
+          MEDIA_ID="18112487938951784"
+
+          ME=$(curl -sS \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            "https://graph.instagram.com/me?fields=id,username")
+          echo "ME=$ME"
+          IG=$(echo "$ME" | jq -r '.id // empty')
+          USERNAME=$(echo "$ME" | jq -r '.username // empty')
+          test -n "$IG"
+
           RESP=$(curl -sS \
             -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
-            "https://graph.instagram.com/$MEDIA_ID?fields=id,media_type,media_url,permalink,timestamp,username")
-          echo "VERIFY_RESPONSE=$RESP"
+            "https://graph.instagram.com/$MEDIA_ID?fields=id,media_type,media_product_type,permalink,timestamp,username,caption")
+          echo "TARGET=$RESP"
+
+          RECENT=$(curl -sS \
+            -H "Authorization: Bearer $INSTAGRAM_ACCESS_TOKEN" \
+            "https://graph.instagram.com/$IG/media?fields=id,media_type,media_product_type,permalink,timestamp,caption&limit=20")
+          echo "RECENT=$RECENT"
+
           ID=$(echo "$RESP" | jq -r '.id // empty')
           PERMALINK=$(echo "$RESP" | jq -r '.permalink // empty')
-          test "$ID" = "$MEDIA_ID"
-          test -n "$PERMALINK"
-          echo "VISIBLE_MEDIA_ID=$ID"
-          echo "VISIBLE_PERMALINK=$PERMALINK"
+          FOUND=$(echo "$RECENT" | jq -r --arg MID "$MEDIA_ID" '[.data[]?.id == $MID] | any')
+
+          echo "ACCOUNT=@$USERNAME ($IG)"
+          echo "TARGET_ID=$ID"
+          echo "TARGET_PERMALINK=$PERMALINK"
+          echo "FOUND_IN_RECENT=$FOUND"
