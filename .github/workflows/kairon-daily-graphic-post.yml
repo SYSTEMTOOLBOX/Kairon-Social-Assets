@@ -1,6 +1,9 @@
 name: Kairon Daily Graphic Post
 
 on:
+  push:
+    paths:
+      - '.github/workflows/kairon-daily-graphic-post.yml'
   workflow_dispatch:
     inputs:
       publish:
