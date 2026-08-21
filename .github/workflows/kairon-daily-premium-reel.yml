@@ -1,6 +1,9 @@
 name: Kairon Daily Premium Reel
 
 on:
+  push:
+    paths:
+      - '.github/workflows/kairon-daily-premium-reel.yml'
   workflow_dispatch:
     inputs:
       publish:
@@ -41,6 +44,8 @@ jobs:
             [ "$HOUR" = "19" ] && SHOULD=true
           elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_PUBLISH" = "true" ]; then
             SHOULD=true
+          elif [ "$EVENT_NAME" = "push" ]; then
+            SHOULD=true
           fi
           echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
           echo "Rome time: $(TZ=Europe/Rome date '+%Y-%m-%d %H:%M:%S %Z')"
@@ -67,6 +72,18 @@ jobs:
             echo "$CAPTION"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure ffmpeg is installed
+        if: steps.gate.outputs.should_publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
 
       - name: Build original cinematic audio
         if: steps.gate.outputs.should_publish == 'true'
