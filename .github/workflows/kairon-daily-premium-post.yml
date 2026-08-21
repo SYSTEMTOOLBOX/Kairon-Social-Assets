@@ -1,9 +1,6 @@
 name: Kairon Daily Premium Post
 
 on:
-  push:
-    paths:
-      - '.github/workflows/kairon-daily-premium-post.yml'
   workflow_dispatch:
     inputs:
       publish:
@@ -39,7 +36,7 @@ jobs:
           test -f today/kairon-pizzeria.jpg
           test -f state/premium_post_index.txt
 
-      - name: Gate premium post
+      - name: Gate at 18 Europe/Rome
         id: gate
         shell: bash
         env:
@@ -48,9 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           SHOULD=false
-          if [ "$EVENT_NAME" = "push" ]; then
-            SHOULD=true
-          elif [ "$EVENT_NAME" = "schedule" ]; then
+          if [ "$EVENT_NAME" = "schedule" ]; then
             HOUR=$(TZ=Europe/Rome date +%H)
             [ "$HOUR" = "18" ] && SHOULD=true
           elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_PUBLISH" = "true" ]; then
