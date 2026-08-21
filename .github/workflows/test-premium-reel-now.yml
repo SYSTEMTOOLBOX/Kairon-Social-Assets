@@ -1,0 +1,137 @@
+name: Kairon Premium Reel Live Test
+
+on:
+  push:
+    paths:
+      - '.github/workflows/test-premium-reel-now.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build cinematic audio
+        shell: bash
+        run: |
+          python - <<'PY'
+          import wave, math, struct
+          sr=48000; dur=9.0; n=int(sr*dur)
+          with wave.open('/tmp/kairon.wav','wb') as w:
+              w.setnchannels(2); w.setsampwidth(2); w.setframerate(sr)
+              frames=[]
+              for i in range(n):
+                  t=i/sr
+                  bed=(math.sin(2*math.pi*43*t)*0.16 + math.sin(2*math.pi*64.5*t)*0.07)
+                  swell=min(1.0,t/3.8)**2
+                  rise=(math.sin(2*math.pi*(90+220*t*t)*t)*0.025*swell) if t<4.1 else 0
+                  hit=0
+                  for st,g in [(2.4,.12),(3.15,.17),(3.75,.23),(4.28,.62)]:
+                      x=t-st
+                      if 0<=x<1.2:
+                          hit += g*math.sin(2*math.pi*(42+30*math.exp(-5*x))*x)*math.exp(-3.4*x)
+                  shimmer=0
+                  x=t-4.35
+                  if 0<=x<3.5:
+                      shimmer=(math.sin(2*math.pi*523.25*x)+0.55*math.sin(2*math.pi*783.99*x))*0.035*math.exp(-0.9*x)
+                  fade=max(0.0,min(1.0,(9.0-t)/1.1))
+                  s=max(-0.92,min(0.92,(bed+rise+hit+shimmer)*fade))
+                  v=int(s*32767)
+                  frames.append(struct.pack('<hh',v,v))
+              w.writeframes(b''.join(frames))
+          PY
+
+      - name: Render premium Gioielleria Reel
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f approved/gioielleria-post.jpg
+          ffmpeg -y -loop 1 -i approved/gioielleria-post.jpg -i /tmp/kairon.wav \
+            -filter_complex "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,zoompan=z='min(zoom+0.00025,1.035)':d=225:s=1080x1920:fps=25,fade=t=in:st=0:d=.35,fade=t=out:st=8.4:d=.6[v]" \
+            -map '[v]' -map 1:a -t 9 -c:v libx264 -preset veryfast -crf 21 -pix_fmt yuv420p -c:a aac -b:a 160k -movflags +faststart /tmp/kairon-live-test.mp4
+
+      - name: Put test Reel on GitHub
+        id: video
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p generated
+          cp /tmp/kairon-live-test.mp4 generated/live-test-premium-reel.mp4
+          git config user.name 'Kairon Auto Social'
+          git config user.email 'kaironlabsstudio@gmail.com'
+          git add generated/live-test-premium-reel.mp4
+          git commit -m 'Render live premium Reel test' || true
+          git push
+          SHA=$(git rev-parse HEAD)
+          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/live-test-premium-reel.mp4"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          for i in {1..25}; do
+            HTTP=$(curl -L -sS -o /tmp/check.mp4 -w '%{http_code}' "$URL" || true)
+            if [ "$HTTP" = "200" ] && [ -s /tmp/check.mp4 ]; then exit 0; fi
+            sleep 3
+          done
+          exit 1
+
+      - name: Publish live Reel test to Instagram
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          VIDEO_URL: ${{ steps.video.outputs.url }}
+        run: |
+          set -euo pipefail
+          ME=$(curl -sS -H "Authorization: Bearer $TOKEN" 'https://graph.instagram.com/me?fields=id,username')
+          IG=$(echo "$ME" | jq -r '.id // empty')
+          USERNAME=$(echo "$ME" | jq -r '.username // empty')
+          test -n "$IG"
+          test "$USERNAME" = 'kaironlabsstudio'
+
+          CAPTION='Sito web per gioielleria ✨ Reel premium di prova Kairon Labs Studio. #KaironLabsStudio #Gioielleria #SitoWeb #WebDesign'
+          CREATE=$(curl -sS -X POST "https://graph.instagram.com/$IG/media" \
+            -H "Authorization: Bearer $TOKEN" \
+            --data-urlencode 'media_type=REELS' \
+            --data-urlencode "video_url=$VIDEO_URL" \
+            --data-urlencode "caption=$CAPTION" \
+            --data-urlencode 'share_to_feed=true')
+          echo "CREATE=$CREATE"
+          CID=$(echo "$CREATE" | jq -r '.id // empty')
+          test -n "$CID"
+
+          READY=false
+          for i in {1..30}; do
+            STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code,status")
+            CODE=$(echo "$STATUS" | jq -r '.status_code // empty')
+            echo "STATUS_$i=$STATUS"
+            if [ "$CODE" = 'FINISHED' ]; then READY=true; break; fi
+            if [ "$CODE" = 'ERROR' ] || [ "$CODE" = 'EXPIRED' ]; then exit 1; fi
+            sleep 10
+          done
+          [ "$READY" = true ]
+
+          PUB=$(curl -sS -X POST "https://graph.instagram.com/$IG/media_publish" \
+            -H "Authorization: Bearer $TOKEN" \
+            --data-urlencode "creation_id=$CID")
+          echo "PUBLISH=$PUB"
+          MID=$(echo "$PUB" | jq -r '.id // empty')
+          test -n "$MID"
+
+          OK=false
+          for i in {1..25}; do
+            RECENT=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$IG/media?fields=id,media_type,media_product_type,permalink&limit=10")
+            FOUND=$(echo "$RECENT" | jq -r --arg MID "$MID" '[.data[]?.id == $MID] | any')
+            if [ "$FOUND" = 'true' ]; then
+              TYPE=$(echo "$RECENT" | jq -r --arg MID "$MID" '.data[] | select(.id==$MID) | .media_product_type')
+              LINK=$(echo "$RECENT" | jq -r --arg MID "$MID" '.data[] | select(.id==$MID) | .permalink')
+              echo "VISIBLE_REEL=$LINK"
+              echo "MEDIA_PRODUCT_TYPE=$TYPE"
+              OK=true
+              break
+            fi
+            sleep 6
+          done
+          [ "$OK" = true ]
