@@ -97,8 +97,12 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-          ffmpeg -version | head -n 1
-          ffprobe -version | head -n 1
+          command -v ffmpeg
+          command -v ffprobe
+          ffmpeg -version >/tmp/ffmpeg-version.txt 2>&1
+          ffprobe -version >/tmp/ffprobe-version.txt 2>&1
+          sed -n '1p' /tmp/ffmpeg-version.txt
+          sed -n '1p' /tmp/ffprobe-version.txt
 
       - name: Build original cinematic audio
         if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
