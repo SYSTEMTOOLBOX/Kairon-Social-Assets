@@ -1,9 +1,6 @@
 name: Kairon Daily Premium Reel
 
 on:
-  push:
-    paths:
-      - '.github/workflows/kairon-daily-premium-reel.yml'
   workflow_dispatch:
     inputs:
       publish:
@@ -43,8 +40,6 @@ jobs:
             HOUR=$(TZ=Europe/Rome date +%H)
             [ "$HOUR" = "19" ] && SHOULD=true
           elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_PUBLISH" = "true" ]; then
-            SHOULD=true
-          elif [ "$EVENT_NAME" = "push" ]; then
             SHOULD=true
           fi
           echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
@@ -216,14 +211,12 @@ jobs:
           IDX: ${{ steps.pick.outputs.index }}
         run: |
           set -euo pipefail
-          NEXT=$(( (IDX + 1) % 3 ))
-          printf '%s\n' "$NEXT" > state/premium_reel_index.txt
-          TZ=Europe/Rome date +%F > state/premium_reel_last_date.txt
           git config user.name 'Kairon Auto Social'
           git config user.email 'kaironlabsstudio@gmail.com'
           git pull --rebase
+          NEXT=$(( (IDX + 1) % 3 ))
+          printf '%s\n' "$NEXT" > state/premium_reel_index.txt
+          TZ=Europe/Rome date +%F > state/premium_reel_last_date.txt
           git add state/premium_reel_index.txt state/premium_reel_last_date.txt
           git commit -m 'Advance Kairon premium Reel queue' || exit 0
           git push
-
-# manual live test trigger: 2026-08-21 18:46 Europe/Rome
