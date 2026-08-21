@@ -1,6 +1,9 @@
 name: Kairon Daily Premium Reel
 
 on:
+  push:
+    paths:
+      - '.github/workflows/kairon-daily-premium-reel.yml'
   workflow_dispatch:
     inputs:
       publish:
@@ -40,6 +43,8 @@ jobs:
             HOUR=$(TZ=Europe/Rome date +%H)
             [ "$HOUR" = "19" ] && SHOULD=true
           elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_PUBLISH" = "true" ]; then
+            SHOULD=true
+          elif [ "$EVENT_NAME" = "push" ]; then
             SHOULD=true
           fi
           echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
@@ -182,6 +187,7 @@ jobs:
             --data-urlencode "video_url=$VIDEO_URL" \
             --data-urlencode "caption=$CAPTION" \
             --data-urlencode 'share_to_feed=true')
+          echo "CREATE=$CREATE"
           CID=$(echo "$CREATE" | jq -r '.id // empty')
           test -n "$CID"
 
@@ -189,6 +195,7 @@ jobs:
           for i in {1..30}; do
             STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code,status")
             CODE=$(echo "$STATUS" | jq -r '.status_code // empty')
+            echo "STATUS_$i=$STATUS"
             if [ "$CODE" = 'FINISHED' ]; then READY=true; break; fi
             if [ "$CODE" = 'ERROR' ] || [ "$CODE" = 'EXPIRED' ]; then exit 1; fi
             sleep 10
@@ -196,6 +203,7 @@ jobs:
           [ "$READY" = true ]
 
           PUB=$(curl -sS -X POST "https://graph.instagram.com/$IG/media_publish" -H "Authorization: Bearer $TOKEN" --data-urlencode "creation_id=$CID")
+          echo "PUBLISH=$PUB"
           MID=$(echo "$PUB" | jq -r '.id // empty')
           test -n "$MID"
 
