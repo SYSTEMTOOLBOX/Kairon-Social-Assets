@@ -1,9 +1,6 @@
 name: Kairon Daily Premium Reel
 
 on:
-  push:
-    paths:
-      - 'state/trigger-premium-reel-test.txt'
   workflow_dispatch:
     inputs:
       publish:
@@ -43,8 +40,6 @@ jobs:
             HOUR=$(TZ=Europe/Rome date +%H)
             [ "$HOUR" = "19" ] && SHOULD=true
           elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_PUBLISH" = "true" ]; then
-            SHOULD=true
-          elif [ "$EVENT_NAME" = "push" ]; then
             SHOULD=true
           fi
           echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
@@ -123,7 +118,6 @@ jobs:
                   t=i/sr
                   master=max(0.0,min(1.0,(9.0-t)/0.75))
 
-                  # Sub-bass foundation: deep only, no whistles or rising sweeps.
                   bed=(
                       math.sin(2*math.pi*36.7*t)*0.20 +
                       math.sin(2*math.pi*55.0*t)*0.105 +
@@ -131,7 +125,6 @@ jobs:
                   )
                   bed*=min(1.0,t/1.0)*master
 
-                  # Low brass swell; all partials remain in low/mid register.
                   b_env=smoothstep((t-1.0)/3.2) * max(0.0,min(1.0,(6.2-t)/0.9))
                   brass=(
                       math.sin(2*math.pi*98.0*t)*0.060 +
@@ -139,14 +132,12 @@ jobs:
                       math.sin(2*math.pi*196.0*t)*0.018
                   )*b_env
 
-                  # Heavy trailer drum pulses.
                   drums=0.0
                   for st,g,f in [(1.65,.13,54),(2.45,.16,50),(3.15,.20,46),(3.72,.25,43),(4.18,.34,40)]:
                       x=t-st
                       if 0.0<=x<1.0:
                           drums += g*math.sin(2*math.pi*(f+10*math.exp(-7*x))*x)*math.exp(-5.0*x)
 
-                  # Main impact: deterministic sub + low brass only. No random/noise component.
                   impact=0.0
                   x=t-4.42
                   if 0.0<=x<1.7:
@@ -157,7 +148,6 @@ jobs:
                                 math.sin(2*math.pi*196*x)*0.042)*math.exp(-2.2*x)
                       impact=sub+low_stab
 
-                  # Warm cinematic tail, low/mid only.
                   tail=0.0
                   x=t-4.55
                   if 0.0<=x<3.4:
@@ -165,7 +155,6 @@ jobs:
                             math.sin(2*math.pi*164.81*x)*0.034 +
                             math.sin(2*math.pi*220.0*x)*0.014)*math.exp(-0.85*x)
 
-                  # Final deep logo accent.
                   accent=0.0
                   x=t-6.65
                   if 0.0<=x<1.2:
