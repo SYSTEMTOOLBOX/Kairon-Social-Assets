@@ -95,32 +95,82 @@ jobs:
           command -v ffmpeg
           command -v ffprobe
 
-      - name: Build original cinematic audio
+      - name: Build deep epic Kairon cinematic audio
         if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
         shell: bash
         run: |
           python - <<'PY'
           import wave, math, random, struct
-          sr=48000; dur=9.0; n=int(sr*dur); random.seed(9)
+          sr=48000
+          dur=9.0
+          n=int(sr*dur)
+          random.seed(20260822)
+          frames=[]
+
+          def smoothstep(x):
+              x=max(0.0,min(1.0,x))
+              return x*x*(3.0-2.0*x)
+
           with wave.open('/tmp/kairon.wav','wb') as w:
-              w.setnchannels(2); w.setsampwidth(2); w.setframerate(sr)
-              frames=[]
+              w.setnchannels(2)
+              w.setsampwidth(2)
+              w.setframerate(sr)
               for i in range(n):
                   t=i/sr
-                  swell=min(1.0,max(0.0,t/3.8))**2
-                  fade=max(0.0,min(1.0,(9.0-t)/1.1))
-                  bed=(math.sin(2*math.pi*43*t)*0.16 + math.sin(2*math.pi*64.5*t)*0.07)*fade
-                  rise=(math.sin(2*math.pi*(90+220*t*t)*t)*0.025*swell) if t<4.1 else 0
-                  hit=0
-                  for st,g in [(2.4,.12),(3.15,.17),(3.75,.23),(4.28,.62)]:
+                  master=max(0.0,min(1.0,(9.0-t)/0.75))
+
+                  # Deep orchestral foundation only: no high-pitched sweep/whistle.
+                  bed=(
+                      math.sin(2*math.pi*36.7*t)*0.19 +
+                      math.sin(2*math.pi*55.0*t)*0.10 +
+                      math.sin(2*math.pi*73.4*t)*0.055
+                  )
+                  bed*=min(1.0,t/1.1)*master
+
+                  # Low brass swell, deliberately kept in the low/mid register.
+                  b_env=smoothstep((t-1.0)/3.2) * max(0.0,min(1.0,(6.2-t)/0.9))
+                  brass=(
+                      math.sin(2*math.pi*110.0*t)*0.055 +
+                      math.sin(2*math.pi*146.83*t)*0.040 +
+                      math.sin(2*math.pi*220.0*t)*0.018
+                  )*b_env
+
+                  # Heavy trailer drum pulses.
+                  drums=0.0
+                  for st,g,f in [(1.65,.13,54),(2.45,.16,50),(3.15,.20,46),(3.72,.25,43),(4.18,.34,40)]:
                       x=t-st
-                      if 0<=x<1.2:
-                          hit += g*(math.sin(2*math.pi*(42+30*math.exp(-5*x))*x))*math.exp(-3.4*x)
-                  shimmer=0
-                  x=t-4.35
-                  if 0<=x<3.5:
-                      shimmer=(math.sin(2*math.pi*523.25*x)+0.55*math.sin(2*math.pi*783.99*x))*0.035*math.exp(-0.9*x)
-                  s=max(-0.92,min(0.92,bed+rise+hit+shimmer))
+                      if 0.0<=x<1.0:
+                          drums += g*math.sin(2*math.pi*(f+10*math.exp(-7*x))*x)*math.exp(-5.0*x)
+
+                  # Main impact: sub + low brass + a short non-tonal slam.
+                  impact=0.0
+                  x=t-4.42
+                  if 0.0<=x<1.7:
+                      sub=(math.sin(2*math.pi*(34+18*math.exp(-2*x))*x)*0.55 +
+                           math.sin(2*math.pi*48*x)*0.24)*math.exp(-2.5*x)
+                      low_stab=(math.sin(2*math.pi*98*x)*0.13 +
+                                math.sin(2*math.pi*130.81*x)*0.08 +
+                                math.sin(2*math.pi*196*x)*0.045)*math.exp(-2.2*x)
+                      slam=(random.random()*2-1)*0.035*math.exp(-15*x)
+                      impact=sub+low_stab+slam
+
+                  # Warm cinematic tail, still low/mid; no shimmer or whistle.
+                  tail=0.0
+                  x=t-4.55
+                  if 0.0<=x<3.4:
+                      tail=(math.sin(2*math.pi*130.81*x)*0.055 +
+                            math.sin(2*math.pi*196.0*x)*0.032 +
+                            math.sin(2*math.pi*261.63*x)*0.016)*math.exp(-0.85*x)
+
+                  # Final low logo accent.
+                  accent=0.0
+                  x=t-6.65
+                  if 0.0<=x<1.2:
+                      accent=(math.sin(2*math.pi*73.4*x)*0.16 +
+                              math.sin(2*math.pi*110*x)*0.07)*math.exp(-4.0*x)
+
+                  s=(bed+brass+drums+impact+tail+accent)*master
+                  s=max(-0.92,min(0.92,s))
                   v=int(s*32767)
                   frames.append(struct.pack('<hh',v,v))
               w.writeframes(b''.join(frames))
