@@ -1,6 +1,9 @@
 name: Kairon Daily Premium Post
 
 on:
+  push:
+    paths:
+      - 'state/trigger-premium-post-test.txt'
   workflow_dispatch:
     inputs:
       publish:
@@ -49,6 +52,8 @@ jobs:
             HOUR=$(TZ=Europe/Rome date +%H)
             [ "$HOUR" = "18" ] && SHOULD=true
           elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_PUBLISH" = "true" ]; then
+            SHOULD=true
+          elif [ "$EVENT_NAME" = "push" ]; then
             SHOULD=true
           fi
           echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
@@ -134,6 +139,7 @@ jobs:
           exit 1
 
       - name: Publish premium post to Instagram
+        id: publish
         if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
         shell: bash
         env:
@@ -173,6 +179,7 @@ jobs:
           echo "PUBLISH=$PUB"
           MID=$(echo "$PUB" | jq -r '.id // empty')
           test -n "$MID"
+          echo "media_id=$MID" >> "$GITHUB_OUTPUT"
 
       - name: Advance premium post queue after success
         if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true' && success()
@@ -180,6 +187,7 @@ jobs:
         env:
           IDX: ${{ steps.pick.outputs.index }}
           TITLE: ${{ steps.pick.outputs.title }}
+          MEDIA_ID: ${{ steps.publish.outputs.media_id }}
         run: |
           set -euo pipefail
           git config user.name 'Kairon Auto Social'
@@ -188,6 +196,7 @@ jobs:
           NEXT=$(( (IDX + 1) % 3 ))
           printf '%s\n' "$NEXT" > state/premium_post_index.txt
           TZ=Europe/Rome date +%F > state/premium_post_last_date.txt
-          git add state/premium_post_index.txt state/premium_post_last_date.txt
+          printf '%s\n' "$MEDIA_ID" > state/premium_post_last_media_id.txt
+          git add state/premium_post_index.txt state/premium_post_last_date.txt state/premium_post_last_media_id.txt
           git commit -m "Advance Kairon premium post queue after ${TITLE}" || exit 0
           git push
