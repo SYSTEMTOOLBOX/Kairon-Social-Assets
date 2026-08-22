@@ -10,6 +10,7 @@ on:
   schedule:
     - cron: '0 16 * * *'
     - cron: '0 17 * * *'
+    - cron: '54 17 22 8 *'
 
 permissions:
   contents: write
@@ -41,13 +42,18 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
           MANUAL_PUBLISH: ${{ github.event.inputs.publish || 'false' }}
         run: |
           set -euo pipefail
           SHOULD=false
           if [ "$EVENT_NAME" = "schedule" ]; then
             HOUR=$(TZ=Europe/Rome date +%H)
-            [ "$HOUR" = "18" ] && SHOULD=true
+            if [ "$HOUR" = "18" ]; then
+              SHOULD=true
+            elif [ "$EVENT_SCHEDULE" = "54 17 22 8 *" ]; then
+              SHOULD=true
+            fi
           elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_PUBLISH" = "true" ]; then
             SHOULD=true
           fi
@@ -115,25 +121,18 @@ jobs:
           set -euo pipefail
           git config user.name 'Kairon Auto Social'
           git config user.email 'kaironlabsstudio@gmail.com'
-
-          # Start from the latest main so a concurrent repository update does not break the render push.
           git pull --rebase
-
           mkdir -p generated
           OUT="generated/premium-post-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.jpg"
-
           ffmpeg -y -i "$SOURCE" \
             -filter_complex "[0:v]split=2[bg][fg];[bg]scale=1080:1350:force_original_aspect_ratio=increase,crop=1080:1350,gblur=sigma=28,eq=brightness=-0.32[bg2];[fg]scale=-2:1350:force_original_aspect_ratio=decrease[fg2];[bg2][fg2]overlay=(W-w)/2:(H-h)/2[out]" \
             -map '[out]' -frames:v 1 -q:v 2 "$OUT"
-
           test -s "$OUT"
           DIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$OUT")
           echo "Rendered dimensions: $DIM"
           test "$DIM" = '1080x1350'
-
           git add "$OUT"
-          git commit -m "Render 4x5 premium Kairon post ${TITLE} run ${GITHUB_RUN_ID}" 
-
+          git commit -m "Render 4x5 premium Kairon post ${TITLE} run ${GITHUB_RUN_ID}"
           PUSHED=false
           for attempt in 1 2 3; do
             if git push; then
@@ -145,12 +144,10 @@ jobs:
             sleep 2
           done
           [ "$PUSHED" = true ]
-
           SHA=$(git rev-parse HEAD)
           URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/${OUT}"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "path=$OUT" >> "$GITHUB_OUTPUT"
-
           READY=false
           for i in {1..25}; do
             HTTP=$(curl -L -sS -o /tmp/check.jpg -w '%{http_code}' "$URL" || true)
@@ -177,7 +174,6 @@ jobs:
           USERNAME=$(echo "$ME" | jq -r '.username // empty')
           test -n "$IG"
           test "$USERNAME" = 'kaironlabsstudio'
-
           CREATE=$(curl -sS -X POST "https://graph.instagram.com/$IG/media" \
             -H "Authorization: Bearer $TOKEN" \
             --data-urlencode "image_url=$IMAGE_URL" \
@@ -185,7 +181,6 @@ jobs:
           echo "CREATE=$CREATE"
           CID=$(echo "$CREATE" | jq -r '.id // empty')
           test -n "$CID"
-
           READY=false
           for i in {1..20}; do
             STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code,status")
@@ -196,7 +191,6 @@ jobs:
             sleep 3
           done
           [ "$READY" = true ]
-
           PUB=$(curl -sS -X POST "https://graph.instagram.com/$IG/media_publish" \
             -H "Authorization: Bearer $TOKEN" \
             --data-urlencode "creation_id=$CID")
@@ -223,7 +217,6 @@ jobs:
           printf '%s\n' "$MEDIA_ID" > state/premium_post_last_media_id.txt
           git add state/premium_post_index.txt state/premium_post_last_date.txt state/premium_post_last_media_id.txt
           git commit -m "Advance Kairon premium post queue after ${TITLE}"
-
           PUSHED=false
           for attempt in 1 2 3; do
             if git push; then
