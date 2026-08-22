@@ -10,7 +10,7 @@ on:
   schedule:
     - cron: '0 16 * * *'
     - cron: '0 17 * * *'
-    - cron: '2 18 * * *'
+    - cron: '*/5 18 * * *'
 
 permissions:
   contents: write
@@ -51,7 +51,7 @@ jobs:
             HOUR=$(TZ=Europe/Rome date +%H)
             if [ "$HOUR" = "18" ]; then
               SHOULD=true
-            elif [ "$EVENT_SCHEDULE" = "2 18 * * *" ]; then
+            elif [ "$EVENT_SCHEDULE" = "*/5 18 * * *" ]; then
               SHOULD=true
             fi
           elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_PUBLISH" = "true" ]; then
