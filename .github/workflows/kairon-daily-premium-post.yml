@@ -113,7 +113,7 @@ jobs:
           set -euo pipefail
 
           RAW="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/${SOURCE}"
-          ENCODED=$(python3 -c 'import os,urllib.parse; print(urllib.parse.quote(os.environ["RAW"], safe=""))' RAW="$RAW")
+          ENCODED=$(RAW="$RAW" python3 -c 'import os,urllib.parse; print(urllib.parse.quote(os.environ["RAW"], safe=""))')
           URL="https://wsrv.nl/?url=${ENCODED}&w=1080&h=1350&fit=contain&cbg=000000&output=jpg&q=92"
 
           echo "Validating transformed 4x5 image"
