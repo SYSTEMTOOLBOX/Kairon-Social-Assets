@@ -1,6 +1,9 @@
 name: Kairon Daily Premium Post
 
 on:
+  push:
+    paths:
+      - '.github/workflows/kairon-daily-premium-post.yml'
   workflow_dispatch:
     inputs:
       publish:
@@ -49,6 +52,8 @@ jobs:
             HOUR=$(TZ=Europe/Rome date +%H)
             [ "$HOUR" = "18" ] && SHOULD=true
           elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_PUBLISH" = "true" ]; then
+            SHOULD=true
+          elif [ "$EVENT_NAME" = "push" ]; then
             SHOULD=true
           fi
           echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
