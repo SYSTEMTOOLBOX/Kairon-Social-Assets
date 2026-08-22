@@ -1,6 +1,9 @@
 name: Kairon Daily Premium Post
 
 on:
+  push:
+    paths:
+      - 'state/trigger-premium-post-test.txt'
   workflow_dispatch:
     inputs:
       publish:
@@ -10,7 +13,6 @@ on:
   schedule:
     - cron: '0 16 * * *'
     - cron: '0 17 * * *'
-    - cron: '*/5 18 * * *'
 
 permissions:
   contents: write
@@ -42,19 +44,16 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
           MANUAL_PUBLISH: ${{ github.event.inputs.publish || 'false' }}
         run: |
           set -euo pipefail
           SHOULD=false
           if [ "$EVENT_NAME" = "schedule" ]; then
             HOUR=$(TZ=Europe/Rome date +%H)
-            if [ "$HOUR" = "18" ]; then
-              SHOULD=true
-            elif [ "$EVENT_SCHEDULE" = "*/5 18 * * *" ]; then
-              SHOULD=true
-            fi
+            [ "$HOUR" = "18" ] && SHOULD=true
           elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_PUBLISH" = "true" ]; then
+            SHOULD=true
+          elif [ "$EVENT_NAME" = "push" ]; then
             SHOULD=true
           fi
           echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
