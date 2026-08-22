@@ -102,6 +102,7 @@ jobs:
             sudo apt-get install -y ffmpeg
           fi
           command -v ffmpeg
+          command -v ffprobe
 
       - name: Prepare Instagram 4x5 premium post
         if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
@@ -109,29 +110,57 @@ jobs:
         shell: bash
         env:
           SOURCE: ${{ steps.pick.outputs.file }}
+          TITLE: ${{ steps.pick.outputs.title }}
         run: |
           set -euo pipefail
-          mkdir -p generated
-          ffmpeg -y -i "$SOURCE" \
-            -filter_complex "[0:v]split=2[bg][fg];[bg]scale=1080:1350:force_original_aspect_ratio=increase,crop=1080:1350,gblur=sigma=28,eq=brightness=-0.32[bg2];[fg]scale=-2:1350:force_original_aspect_ratio=decrease[fg2];[bg2][fg2]overlay=(W-w)/2:(H-h)/2[out]" \
-            -map '[out]' -frames:v 1 -q:v 2 generated/premium-post-current.jpg
-          test -s generated/premium-post-current.jpg
-
           git config user.name 'Kairon Auto Social'
           git config user.email 'kaironlabsstudio@gmail.com'
-          git add generated/premium-post-current.jpg
-          git commit -m "Render 4x5 premium Kairon post ${{ steps.pick.outputs.title }}" || true
-          git push
+
+          # Start from the latest main so a concurrent repository update does not break the render push.
+          git pull --rebase
+
+          mkdir -p generated
+          OUT="generated/premium-post-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.jpg"
+
+          ffmpeg -y -i "$SOURCE" \
+            -filter_complex "[0:v]split=2[bg][fg];[bg]scale=1080:1350:force_original_aspect_ratio=increase,crop=1080:1350,gblur=sigma=28,eq=brightness=-0.32[bg2];[fg]scale=-2:1350:force_original_aspect_ratio=decrease[fg2];[bg2][fg2]overlay=(W-w)/2:(H-h)/2[out]" \
+            -map '[out]' -frames:v 1 -q:v 2 "$OUT"
+
+          test -s "$OUT"
+          DIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$OUT")
+          echo "Rendered dimensions: $DIM"
+          test "$DIM" = '1080x1350'
+
+          git add "$OUT"
+          git commit -m "Render 4x5 premium Kairon post ${TITLE} run ${GITHUB_RUN_ID}" 
+
+          PUSHED=false
+          for attempt in 1 2 3; do
+            if git push; then
+              PUSHED=true
+              break
+            fi
+            echo "Push attempt $attempt failed; rebasing on latest main and retrying"
+            git pull --rebase
+            sleep 2
+          done
+          [ "$PUSHED" = true ]
 
           SHA=$(git rev-parse HEAD)
-          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/premium-post-current.jpg"
+          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/${OUT}"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "path=$OUT" >> "$GITHUB_OUTPUT"
+
+          READY=false
           for i in {1..25}; do
             HTTP=$(curl -L -sS -o /tmp/check.jpg -w '%{http_code}' "$URL" || true)
-            if [ "$HTTP" = "200" ] && [ -s /tmp/check.jpg ]; then exit 0; fi
+            if [ "$HTTP" = "200" ] && [ -s /tmp/check.jpg ]; then
+              READY=true
+              break
+            fi
             sleep 3
           done
-          exit 1
+          [ "$READY" = true ]
 
       - name: Publish premium post to Instagram
         id: publish
@@ -193,5 +222,15 @@ jobs:
           TZ=Europe/Rome date +%F > state/premium_post_last_date.txt
           printf '%s\n' "$MEDIA_ID" > state/premium_post_last_media_id.txt
           git add state/premium_post_index.txt state/premium_post_last_date.txt state/premium_post_last_media_id.txt
-          git commit -m "Advance Kairon premium post queue after ${TITLE}" || exit 0
-          git push
+          git commit -m "Advance Kairon premium post queue after ${TITLE}"
+
+          PUSHED=false
+          for attempt in 1 2 3; do
+            if git push; then
+              PUSHED=true
+              break
+            fi
+            git pull --rebase
+            sleep 2
+          done
+          [ "$PUSHED" = true ]
