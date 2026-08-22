@@ -1,9 +1,6 @@
 name: Kairon Daily Premium Post
 
 on:
-  push:
-    paths:
-      - 'state/trigger-premium-post-test.txt'
   workflow_dispatch:
     inputs:
       publish:
@@ -52,8 +49,6 @@ jobs:
             HOUR=$(TZ=Europe/Rome date +%H)
             [ "$HOUR" = "18" ] && SHOULD=true
           elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_PUBLISH" = "true" ]; then
-            SHOULD=true
-          elif [ "$EVENT_NAME" = "push" ]; then
             SHOULD=true
           fi
           echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
@@ -255,7 +250,6 @@ jobs:
             echo "Updated ${PATH_NAME} in ${NEW_SHA}"
           }
 
-          # Write last_date first: even if a later receipt update fails, a successful Instagram publish cannot duplicate today.
           update_state_file state/premium_post_last_date.txt "$TODAY" "Mark premium Post published ${TODAY}"
           update_state_file state/premium_post_index.txt "$NEXT" "Advance premium Post queue after ${TITLE}"
           update_state_file state/premium_post_last_media_id.txt "$MEDIA_ID" "Save premium Post Instagram media receipt"
