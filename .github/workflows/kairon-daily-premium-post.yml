@@ -1,64 +1,162 @@
-name: Kairon Native 4x5 Post Test
+name: Kairon Daily Native 4x5 Post
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 16 * * *'
+    - cron: '0 17 * * *'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: kairon-native-4x5-post-test
+  group: kairon-daily-native-post
   cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Verify native 4x5 test asset
+      - name: Gate 18:00 Europe Rome or manual
+        id: gate
         shell: bash
         run: |
           set -euo pipefail
-          FILE='approved/kairon-test-post-1080x1350.jpg'
+          SHOULD=false
+          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+            SHOULD=true
+          else
+            HOUR=$(TZ=Europe/Rome date +%H)
+            echo "Europe/Rome hour: $HOUR"
+            if [ "$HOUR" = '18' ]; then SHOULD=true; fi
+          fi
+          echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
+
+      - name: Install approved weekly native assets if needed
+        if: steps.gate.outputs.should_publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p approved/week
+          FILES=(
+            agenzia-immobiliare-post.jpg
+            palestra-post.jpg
+            dentista-post.jpg
+            hotel-bnb-post.jpg
+            ristorante-post.jpg
+            officina-meccanica-post.jpg
+            studio-legale-post.jpg
+          )
+          MISSING=false
+          for F in "${FILES[@]}"; do
+            [ -s "approved/week/$F" ] || MISSING=true
+          done
+          if [ "$MISSING" = true ]; then
+            test -s approved/kairon-week-posts.zip
+            unzip -j -o approved/kairon-week-posts.zip -d approved/week
+            for F in "${FILES[@]}"; do test -s "approved/week/$F"; done
+            git config user.name 'Kairon Auto Social'
+            git config user.email 'kaironlabsstudio@gmail.com'
+            git add approved/week
+            if ! git diff --cached --quiet; then
+              git commit -m 'Install approved native 4x5 weekly post assets'
+              git push origin HEAD:main
+            fi
+          fi
+
+      - name: Skip if a post was already published today
+        if: steps.gate.outputs.should_publish == 'true'
+        id: daily
+        shell: bash
+        run: |
+          set -euo pipefail
+          TODAY=$(TZ=Europe/Rome date +%F)
+          LAST=''
+          [ -f state/premium_post_last_date.txt ] && LAST=$(tr -d '\r\n ' < state/premium_post_last_date.txt)
+          if [ "$TODAY" = "$LAST" ]; then
+            echo 'already_posted=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'already_posted=false' >> "$GITHUB_OUTPUT"
+          fi
+          echo "TODAY=$TODAY LAST=$LAST"
+
+      - name: Choose next new sector
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
+        id: pick
+        shell: bash
+        run: |
+          set -euo pipefail
+          IDX=0
+          [ -f state/premium_post_index.txt ] && IDX=$(tr -d '\r\n ' < state/premium_post_index.txt)
+          case "$IDX" in
+            0) FILE='approved/week/agenzia-immobiliare-post.jpg'; TITLE='AGENZIA IMMOBILIARE'; CAPTION='Un sito web che valorizza ogni immobile e trasforma visite in nuovi contatti. 🏡 Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #AgenziaImmobiliare #WebDesign #SitoWeb' ;;
+            1) FILE='approved/week/palestra-post.jpg'; TITLE='PALESTRA'; CAPTION='Più iscritti, prenotazioni semplici e una presenza digitale professionale. 💪 Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #Palestra #WebDesign #SitoWeb' ;;
+            2) FILE='approved/week/dentista-post.jpg'; TITLE='DENTISTA'; CAPTION='Credibilità, prenotazioni e una presenza online all’altezza del tuo studio. 🦷 Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #Dentista #WebDesign #SitoWeb' ;;
+            3) FILE='approved/week/hotel-bnb-post.jpg'; TITLE='HOTEL E B&B'; CAPTION='Più prenotazioni dirette e un’esperienza digitale elegante per i tuoi ospiti. 🏨 Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #Hotel #BedAndBreakfast #WebDesign' ;;
+            4) FILE='approved/week/ristorante-post.jpg'; TITLE='RISTORANTE'; CAPTION='Menu, prenotazioni e immagine premium: il tuo ristorante anche online deve farsi ricordare. 🍽️ Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #Ristorante #WebDesign #SitoWeb' ;;
+            5) FILE='approved/week/officina-meccanica-post.jpg'; TITLE='OFFICINA MECCANICA'; CAPTION='Più fiducia, più appuntamenti e una presenza locale forte per la tua officina. 🔧 Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #Officina #WebDesign #SitoWeb' ;;
+            6) FILE='approved/week/studio-legale-post.jpg'; TITLE='STUDIO LEGALE'; CAPTION='Un sito autorevole, elegante e professionale che comunica fiducia fin dal primo contatto. ⚖️ Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #StudioLegale #WebDesign #SitoWeb' ;;
+            *) IDX=0; FILE='approved/week/agenzia-immobiliare-post.jpg'; TITLE='AGENZIA IMMOBILIARE'; CAPTION='Un sito web che valorizza ogni immobile e trasforma visite in nuovi contatti. 🏡 Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #AgenziaImmobiliare #WebDesign #SitoWeb' ;;
+          esac
           test -s "$FILE"
+          echo "index=$IDX" >> "$GITHUB_OUTPUT"
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+          {
+            echo 'caption<<EOF'
+            echo "$CAPTION"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify exact native 1080x1350
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
+        shell: bash
+        env:
+          FILE: ${{ steps.pick.outputs.file }}
+        run: |
+          set -euo pipefail
           if ! command -v ffprobe >/dev/null 2>&1; then
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
           DIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$FILE")
-          echo "Native asset dimensions: $DIM"
+          echo "Native dimensions: $DIM"
           test "$DIM" = '1080x1350'
 
       - name: Prepare direct native image URL
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
         id: image
         shell: bash
+        env:
+          FILE: ${{ steps.pick.outputs.file }}
         run: |
           set -euo pipefail
-          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/approved/kairon-test-post-1080x1350.jpg"
-          HTTP=$(curl -L --fail --retry 3 --retry-delay 2 -sS -o /tmp/native-post.jpg -w '%{http_code}' "$URL")
+          SHA=$(git rev-parse HEAD)
+          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/${FILE}"
+          HTTP=$(curl -L --fail --retry 5 --retry-delay 2 -sS -o /tmp/native-post.jpg -w '%{http_code}' "$URL")
           echo "Raw image HTTP=$HTTP"
           test "$HTTP" = '200'
-          test -s /tmp/native-post.jpg
           DIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 /tmp/native-post.jpg)
           echo "Downloaded native dimensions: $DIM"
           test "$DIM" = '1080x1350'
           echo "url=$URL" >> "$GITHUB_OUTPUT"
 
-      - name: Publish native 4x5 test to Instagram
+      - name: Publish native premium post to Instagram
         id: publish
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
         shell: bash
         env:
           TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
           IMAGE_URL: ${{ steps.image.outputs.url }}
-          CAPTION: 'TEST TECNICO Kairon — Post nativo 4:5 1080×1350. Verifica formato senza ridimensionamento.'
+          CAPTION: ${{ steps.pick.outputs.caption }}
         run: |
           set -euo pipefail
-
-          HTTP_ME=$(curl -sS -o /tmp/instagram-me.json -w '%{http_code}' \
-            -H "Authorization: Bearer $TOKEN" \
-            'https://graph.instagram.com/me?fields=id,username')
+          HTTP_ME=$(curl -sS -o /tmp/instagram-me.json -w '%{http_code}' -H "Authorization: Bearer $TOKEN" 'https://graph.instagram.com/me?fields=id,username')
           ME=$(cat /tmp/instagram-me.json)
           echo "Instagram account check HTTP=$HTTP_ME"
           if [ "$HTTP_ME" -lt 200 ] || [ "$HTTP_ME" -ge 300 ]; then
@@ -66,18 +164,13 @@ jobs:
             echo "Instagram account error: $ERROR_MSG"
             exit 1
           fi
-
           IG=$(echo "$ME" | jq -r '.id // empty')
           USERNAME=$(echo "$ME" | jq -r '.username // empty')
           echo "Instagram username=$USERNAME"
           test -n "$IG"
           test "$USERNAME" = 'kaironlabsstudio'
 
-          HTTP_CREATE=$(curl -sS -o /tmp/instagram-create.json -w '%{http_code}' -X POST \
-            "https://graph.instagram.com/$IG/media" \
-            -H "Authorization: Bearer $TOKEN" \
-            --data-urlencode "image_url=$IMAGE_URL" \
-            --data-urlencode "caption=$CAPTION")
+          HTTP_CREATE=$(curl -sS -o /tmp/instagram-create.json -w '%{http_code}' -X POST "https://graph.instagram.com/$IG/media" -H "Authorization: Bearer $TOKEN" --data-urlencode "image_url=$IMAGE_URL" --data-urlencode "caption=$CAPTION")
           CREATE=$(cat /tmp/instagram-create.json)
           echo "Instagram media create HTTP=$HTTP_CREATE"
           if [ "$HTTP_CREATE" -lt 200 ] || [ "$HTTP_CREATE" -ge 300 ]; then
@@ -85,29 +178,21 @@ jobs:
             echo "Instagram media create error: $ERROR_MSG"
             exit 1
           fi
-
           CID=$(echo "$CREATE" | jq -r '.id // empty')
           test -n "$CID"
 
           READY=false
           for i in {1..20}; do
-            STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" \
-              "https://graph.instagram.com/$CID?fields=status_code,status")
+            STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code,status")
             CODE=$(echo "$STATUS" | jq -r '.status_code // empty')
             echo "Instagram container status $i: $CODE"
             if [ "$CODE" = 'FINISHED' ]; then READY=true; break; fi
-            if [ "$CODE" = 'ERROR' ] || [ "$CODE" = 'EXPIRED' ]; then
-              echo "$STATUS"
-              exit 1
-            fi
+            if [ "$CODE" = 'ERROR' ] || [ "$CODE" = 'EXPIRED' ]; then echo "$STATUS"; exit 1; fi
             sleep 3
           done
           test "$READY" = true
 
-          HTTP_PUB=$(curl -sS -o /tmp/instagram-publish.json -w '%{http_code}' -X POST \
-            "https://graph.instagram.com/$IG/media_publish" \
-            -H "Authorization: Bearer $TOKEN" \
-            --data-urlencode "creation_id=$CID")
+          HTTP_PUB=$(curl -sS -o /tmp/instagram-publish.json -w '%{http_code}' -X POST "https://graph.instagram.com/$IG/media_publish" -H "Authorization: Bearer $TOKEN" --data-urlencode "creation_id=$CID")
           PUB=$(cat /tmp/instagram-publish.json)
           echo "Instagram media publish HTTP=$HTTP_PUB"
           if [ "$HTTP_PUB" -lt 200 ] || [ "$HTTP_PUB" -ge 300 ]; then
@@ -115,7 +200,26 @@ jobs:
             echo "Instagram media publish error: $ERROR_MSG"
             exit 1
           fi
-
           MID=$(echo "$PUB" | jq -r '.id // empty')
           test -n "$MID"
           echo "Instagram published media id=$MID"
+          echo "media_id=$MID" >> "$GITHUB_OUTPUT"
+
+      - name: Advance weekly queue after success
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true' && success()
+        shell: bash
+        env:
+          IDX: ${{ steps.pick.outputs.index }}
+          TITLE: ${{ steps.pick.outputs.title }}
+          MEDIA_ID: ${{ steps.publish.outputs.media_id }}
+        run: |
+          set -euo pipefail
+          git config user.name 'Kairon Auto Social'
+          git config user.email 'kaironlabsstudio@gmail.com'
+          NEXT=$(( (IDX + 1) % 7 ))
+          printf '%s\n' "$NEXT" > state/premium_post_index.txt
+          TZ=Europe/Rome date +%F > state/premium_post_last_date.txt
+          printf '%s\n' "$MEDIA_ID" > state/premium_post_last_media_id.txt
+          git add state/premium_post_index.txt state/premium_post_last_date.txt state/premium_post_last_media_id.txt
+          git commit -m "Advance Kairon weekly native post queue after ${TITLE}"
+          git push origin HEAD:main
