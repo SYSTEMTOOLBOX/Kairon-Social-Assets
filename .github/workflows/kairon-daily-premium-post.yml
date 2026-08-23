@@ -133,37 +133,98 @@ jobs:
           CAPTION: ${{ steps.pick.outputs.caption }}
         run: |
           set -euo pipefail
-          ME=$(curl -sS -H "Authorization: Bearer $TOKEN" 'https://graph.instagram.com/me?fields=id,username')
+
+          HTTP_ME=$(curl -sS -o /tmp/instagram-me.json -w '%{http_code}' \
+            -H "Authorization: Bearer $TOKEN" \
+            'https://graph.instagram.com/me?fields=id,username')
+          ME=$(cat /tmp/instagram-me.json)
+          echo "Instagram account check HTTP=$HTTP_ME"
+
+          if [ "$HTTP_ME" -lt 200 ] || [ "$HTTP_ME" -ge 300 ]; then
+            ERROR_TYPE=$(echo "$ME" | jq -r '.error.type // empty')
+            ERROR_CODE=$(echo "$ME" | jq -r '.error.code // empty')
+            ERROR_MSG=$(echo "$ME" | jq -r '.error.message // .message // "unknown error"')
+            echo "Instagram account error: type=$ERROR_TYPE code=$ERROR_CODE message=$ERROR_MSG"
+            exit 1
+          fi
+
           IG=$(echo "$ME" | jq -r '.id // empty')
           USERNAME=$(echo "$ME" | jq -r '.username // empty')
-          test -n "$IG"
-          test "$USERNAME" = 'kaironlabsstudio'
+          echo "Instagram account id=$IG username=$USERNAME"
 
-          CREATE=$(curl -sS -X POST "https://graph.instagram.com/$IG/media" \
+          if [ -z "$IG" ]; then
+            echo 'Instagram account error: missing account id'
+            exit 1
+          fi
+          if [ "$USERNAME" != 'kaironlabsstudio' ]; then
+            echo "Instagram account error: expected kaironlabsstudio but received '$USERNAME'"
+            exit 1
+          fi
+
+          HTTP_CREATE=$(curl -sS -o /tmp/instagram-create.json -w '%{http_code}' -X POST \
+            "https://graph.instagram.com/$IG/media" \
             -H "Authorization: Bearer $TOKEN" \
             --data-urlencode "image_url=$IMAGE_URL" \
             --data-urlencode "caption=$CAPTION")
-          echo "CREATE=$CREATE"
+          CREATE=$(cat /tmp/instagram-create.json)
+          echo "Instagram media create HTTP=$HTTP_CREATE"
+
+          if [ "$HTTP_CREATE" -lt 200 ] || [ "$HTTP_CREATE" -ge 300 ]; then
+            ERROR_TYPE=$(echo "$CREATE" | jq -r '.error.type // empty')
+            ERROR_CODE=$(echo "$CREATE" | jq -r '.error.code // empty')
+            ERROR_MSG=$(echo "$CREATE" | jq -r '.error.message // .message // "unknown error"')
+            echo "Instagram media create error: type=$ERROR_TYPE code=$ERROR_CODE message=$ERROR_MSG"
+            exit 1
+          fi
+
           CID=$(echo "$CREATE" | jq -r '.id // empty')
-          test -n "$CID"
+          if [ -z "$CID" ]; then
+            echo 'Instagram media create error: creation id missing'
+            exit 1
+          fi
+          echo "Instagram creation id=$CID"
 
           READY=false
           for i in {1..20}; do
-            STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code,status")
+            STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" \
+              "https://graph.instagram.com/$CID?fields=status_code,status")
             CODE=$(echo "$STATUS" | jq -r '.status_code // empty')
-            echo "STATUS_$i=$STATUS"
+            echo "Instagram container status $i: $CODE"
             if [ "$CODE" = 'FINISHED' ]; then READY=true; break; fi
-            if [ "$CODE" = 'ERROR' ] || [ "$CODE" = 'EXPIRED' ]; then exit 1; fi
+            if [ "$CODE" = 'ERROR' ] || [ "$CODE" = 'EXPIRED' ]; then
+              ERROR_MSG=$(echo "$STATUS" | jq -r '.status // .error.message // "container failed"')
+              echo "Instagram container error: $ERROR_MSG"
+              exit 1
+            fi
             sleep 3
           done
-          [ "$READY" = true ]
 
-          PUB=$(curl -sS -X POST "https://graph.instagram.com/$IG/media_publish" \
+          if [ "$READY" != true ]; then
+            echo 'Instagram container error: processing timeout'
+            exit 1
+          fi
+
+          HTTP_PUB=$(curl -sS -o /tmp/instagram-publish.json -w '%{http_code}' -X POST \
+            "https://graph.instagram.com/$IG/media_publish" \
             -H "Authorization: Bearer $TOKEN" \
             --data-urlencode "creation_id=$CID")
-          echo "PUBLISH=$PUB"
+          PUB=$(cat /tmp/instagram-publish.json)
+          echo "Instagram media publish HTTP=$HTTP_PUB"
+
+          if [ "$HTTP_PUB" -lt 200 ] || [ "$HTTP_PUB" -ge 300 ]; then
+            ERROR_TYPE=$(echo "$PUB" | jq -r '.error.type // empty')
+            ERROR_CODE=$(echo "$PUB" | jq -r '.error.code // empty')
+            ERROR_MSG=$(echo "$PUB" | jq -r '.error.message // .message // "unknown error"')
+            echo "Instagram media publish error: type=$ERROR_TYPE code=$ERROR_CODE message=$ERROR_MSG"
+            exit 1
+          fi
+
           MID=$(echo "$PUB" | jq -r '.id // empty')
-          test -n "$MID"
+          if [ -z "$MID" ]; then
+            echo 'Instagram media publish error: media id missing'
+            exit 1
+          fi
+          echo "Instagram published media id=$MID"
           echo "media_id=$MID" >> "$GITHUB_OUTPUT"
 
       - name: Advance premium post queue after success
