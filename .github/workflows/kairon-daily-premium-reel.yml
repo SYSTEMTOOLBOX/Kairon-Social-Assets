@@ -1,39 +1,123 @@
-name: Kairon Native 9x16 Reel Test
+name: Kairon Daily Native 9x16 Reel
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 17 * * *'
+    - cron: '0 18 * * *'
 
 permissions:
   contents: write
 
 concurrency:
-  group: kairon-native-9x16-reel-test
+  group: kairon-daily-native-reel
   cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Verify native 9x16 test asset
+      - name: Gate 19 Europe Rome or manual
+        id: gate
         shell: bash
         run: |
           set -euo pipefail
-          FILE='approved/kairon-test-reel-1080x1920.jpg'
+          SHOULD=false
+          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+            SHOULD=true
+          else
+            HOUR=$(TZ=Europe/Rome date +%H)
+            echo "Europe/Rome hour: $HOUR"
+            if [ "$HOUR" = '19' ]; then SHOULD=true; fi
+          fi
+          echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if a Reel was already published today
+        if: steps.gate.outputs.should_publish == 'true'
+        id: daily
+        shell: bash
+        run: |
+          set -euo pipefail
+          TODAY=$(TZ=Europe/Rome date +%F)
+          LAST=''
+          [ -f state/premium_reel_last_date.txt ] && LAST=$(tr -d '\r\n ' < state/premium_reel_last_date.txt)
+          if [ "$TODAY" = "$LAST" ]; then
+            echo 'already_posted=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'already_posted=false' >> "$GITHUB_OUTPUT"
+          fi
+          echo "TODAY=$TODAY LAST=$LAST"
+
+      - name: Install weekly native Reel assets
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s approved/kairon-week-reels-1080x1920.zip
+          rm -rf /tmp/kairon-week-reels
+          mkdir -p /tmp/kairon-week-reels
+          unzip -j -o approved/kairon-week-reels-1080x1920.zip -d /tmp/kairon-week-reels
+          FILES=(
+            agenzia-immobiliare-reel.jpg
+            palestra-reel.jpg
+            dentista-reel.jpg
+            hotel-bnb-reel.jpg
+            ristorante-reel.jpg
+            officina-meccanica-reel.jpg
+            studio-legale-reel.jpg
+          )
+          for F in "${FILES[@]}"; do test -s "/tmp/kairon-week-reels/$F"; done
+
+      - name: Choose next new sector Reel
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
+        id: pick
+        shell: bash
+        run: |
+          set -euo pipefail
+          IDX=0
+          [ -f state/premium_reel_index.txt ] && IDX=$(tr -d '\r\n ' < state/premium_reel_index.txt)
+          case "$IDX" in
+            0) FILE='/tmp/kairon-week-reels/agenzia-immobiliare-reel.jpg'; TITLE='AGENZIA IMMOBILIARE'; CAPTION='Fai vedere il vero valore dei tuoi immobili. 🏡 Un sito professionale aumenta credibilità, contatti e opportunità. Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #AgenziaImmobiliare #SitoWeb #WebDesign' ;;
+            1) FILE='/tmp/kairon-week-reels/palestra-reel.jpg'; TITLE='PALESTRA'; CAPTION='La tua palestra merita una presenza online che motiva ancora prima di entrare. 💪 Più visibilità, più iscritti, più clienti. #KaironLabsStudio #Palestra #SitoWeb #WebDesign' ;;
+            2) FILE='/tmp/kairon-week-reels/dentista-reel.jpg'; TITLE='DENTISTA'; CAPTION='Il primo segnale di fiducia può partire dal tuo sito. 🦷 Immagine professionale e prenotazioni semplici per il tuo studio. #KaironLabsStudio #Dentista #SitoWeb #WebDesign' ;;
+            3) FILE='/tmp/kairon-week-reels/hotel-bnb-reel.jpg'; TITLE='HOTEL E B&B'; CAPTION='Più prenotazioni dirette, meno dipendenza dalle piattaforme. 🏨 Dai alla tua struttura un’immagine online all’altezza dell’esperienza che offri. #KaironLabsStudio #Hotel #Bnb #WebDesign' ;;
+            4) FILE='/tmp/kairon-week-reels/ristorante-reel.jpg'; TITLE='RISTORANTE'; CAPTION='Il tuo ristorante deve far venire voglia di prenotare ancora prima di sedersi a tavola. 🍽️ Porta menu, immagine e prenotazioni online. #KaironLabsStudio #Ristorante #SitoWeb #WebDesign' ;;
+            5) FILE='/tmp/kairon-week-reels/officina-meccanica-reel.jpg'; TITLE='OFFICINA MECCANICA'; CAPTION='Competenza e affidabilità devono vedersi anche online. 🔧 Più fiducia, più richieste e più appuntamenti per la tua officina. #KaironLabsStudio #OfficinaMeccanica #SitoWeb #WebDesign' ;;
+            6) FILE='/tmp/kairon-week-reels/studio-legale-reel.jpg'; TITLE='STUDIO LEGALE'; CAPTION='Autorevolezza, chiarezza e fiducia fin dal primo contatto. ⚖️ Un sito professionale valorizza il tuo studio e porta nuovi contatti. #KaironLabsStudio #StudioLegale #SitoWeb #WebDesign' ;;
+            *) IDX=0; FILE='/tmp/kairon-week-reels/agenzia-immobiliare-reel.jpg'; TITLE='AGENZIA IMMOBILIARE'; CAPTION='Fai vedere il vero valore dei tuoi immobili. 🏡 Un sito professionale aumenta credibilità, contatti e opportunità. Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #AgenziaImmobiliare #SitoWeb #WebDesign' ;;
+          esac
           test -s "$FILE"
+          echo "index=$IDX" >> "$GITHUB_OUTPUT"
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+          {
+            echo 'caption<<EOF'
+            echo "$CAPTION"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify exact native 1080x1920
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
+        shell: bash
+        env:
+          FILE: ${{ steps.pick.outputs.file }}
+        run: |
+          set -euo pipefail
           if ! command -v ffmpeg >/dev/null 2>&1; then
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
           DIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$FILE")
-          echo "Native asset dimensions: $DIM"
+          echo "Native Reel asset dimensions: $DIM"
           test "$DIM" = '1080x1920'
 
       - name: Build deep Kairon cinematic audio
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
         shell: bash
         run: |
           python - <<'PY'
@@ -42,11 +126,9 @@ jobs:
           dur=9.0
           n=int(sr*dur)
           frames=[]
-
           def smoothstep(x):
               x=max(0.0,min(1.0,x))
               return x*x*(3.0-2.0*x)
-
           with wave.open('/tmp/kairon.wav','wb') as w:
               w.setnchannels(2)
               w.setsampwidth(2)
@@ -54,14 +136,10 @@ jobs:
               for i in range(n):
                   t=i/sr
                   master=max(0.0,min(1.0,(9.0-t)/0.75))
-                  bed=(math.sin(2*math.pi*36.7*t)*0.20 +
-                       math.sin(2*math.pi*55.0*t)*0.105 +
-                       math.sin(2*math.pi*73.4*t)*0.052)
+                  bed=(math.sin(2*math.pi*36.7*t)*0.20 + math.sin(2*math.pi*55.0*t)*0.105 + math.sin(2*math.pi*73.4*t)*0.052)
                   bed*=min(1.0,t/1.0)*master
                   b_env=smoothstep((t-1.0)/3.2) * max(0.0,min(1.0,(6.2-t)/0.9))
-                  brass=(math.sin(2*math.pi*98.0*t)*0.060 +
-                         math.sin(2*math.pi*130.81*t)*0.043 +
-                         math.sin(2*math.pi*196.0*t)*0.018)*b_env
+                  brass=(math.sin(2*math.pi*98.0*t)*0.060 + math.sin(2*math.pi*130.81*t)*0.043 + math.sin(2*math.pi*196.0*t)*0.018)*b_env
                   drums=0.0
                   for st,g,f in [(1.65,.13,54),(2.45,.16,50),(3.15,.20,46),(3.72,.25,43),(4.18,.34,40)]:
                       x=t-st
@@ -70,23 +148,17 @@ jobs:
                   impact=0.0
                   x=t-4.42
                   if 0.0<=x<1.7:
-                      sub=(math.sin(2*math.pi*(34+18*math.exp(-2*x))*x)*0.58 +
-                           math.sin(2*math.pi*48*x)*0.25)*math.exp(-2.5*x)
-                      low=(math.sin(2*math.pi*98*x)*0.14 +
-                           math.sin(2*math.pi*130.81*x)*0.085 +
-                           math.sin(2*math.pi*196*x)*0.042)*math.exp(-2.2*x)
+                      sub=(math.sin(2*math.pi*(34+18*math.exp(-2*x))*x)*0.58 + math.sin(2*math.pi*48*x)*0.25)*math.exp(-2.5*x)
+                      low=(math.sin(2*math.pi*98*x)*0.14 + math.sin(2*math.pi*130.81*x)*0.085 + math.sin(2*math.pi*196*x)*0.042)*math.exp(-2.2*x)
                       impact=sub+low
                   tail=0.0
                   x=t-4.55
                   if 0.0<=x<3.4:
-                      tail=(math.sin(2*math.pi*110.0*x)*0.060 +
-                            math.sin(2*math.pi*164.81*x)*0.034 +
-                            math.sin(2*math.pi*220.0*x)*0.014)*math.exp(-0.85*x)
+                      tail=(math.sin(2*math.pi*110.0*x)*0.060 + math.sin(2*math.pi*164.81*x)*0.034 + math.sin(2*math.pi*220.0*x)*0.014)*math.exp(-0.85*x)
                   accent=0.0
                   x=t-6.65
                   if 0.0<=x<1.2:
-                      accent=(math.sin(2*math.pi*73.4*x)*0.17 +
-                              math.sin(2*math.pi*110*x)*0.075)*math.exp(-4.0*x)
+                      accent=(math.sin(2*math.pi*73.4*x)*0.17 + math.sin(2*math.pi*110*x)*0.075)*math.exp(-4.0*x)
                   s=(bed+brass+drums+impact+tail+accent)*master
                   s=max(-0.92,min(0.92,s))
                   v=int(s*32767)
@@ -95,62 +167,73 @@ jobs:
           PY
 
       - name: Render native Reel without crop or resize
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
         shell: bash
+        env:
+          IMAGE: ${{ steps.pick.outputs.file }}
         run: |
           set -euo pipefail
-          IMAGE='approved/kairon-test-reel-1080x1920.jpg'
           ffmpeg -y -loop 1 -framerate 25 -i "$IMAGE" -i /tmp/kairon.wav \
             -filter_complex "[0:v]fade=t=out:st=8.4:d=0.6,format=yuv420p[v];[1:a]lowpass=f=850,volume=1.0[a]" \
-            -map '[v]' -map '[a]' -t 9 -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p -c:a aac -b:a 160k -movflags +faststart /tmp/kairon-reel-test.mp4
-          DIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 /tmp/kairon-reel-test.mp4)
+            -map '[v]' -map '[a]' -t 9 -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p -c:a aac -b:a 160k -movflags +faststart /tmp/kairon-premium-reel.mp4
+          DIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 /tmp/kairon-premium-reel.mp4)
           echo "Rendered Reel dimensions: $DIM"
           test "$DIM" = '1080x1920'
 
       - name: Publish MP4 to GitHub for Instagram fetch
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
         id: video
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p generated
-          cp /tmp/kairon-reel-test.mp4 generated/reel-test-current.mp4
+          cp /tmp/kairon-premium-reel.mp4 generated/premium-reel-current.mp4
           git config user.name 'Kairon Auto Social'
           git config user.email 'kaironlabsstudio@gmail.com'
-          git add generated/reel-test-current.mp4
-          git commit -m 'Render native 9x16 Kairon Reel test' || true
+          git add generated/premium-reel-current.mp4
+          git commit -m "Render native Kairon Reel ${{ steps.pick.outputs.title }}" || true
           git push origin HEAD:main
           SHA=$(git rev-parse HEAD)
-          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/reel-test-current.mp4"
+          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/premium-reel-current.mp4"
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           for i in {1..25}; do
             HTTP=$(curl -L -sS -o /tmp/check.mp4 -w '%{http_code}' "$URL" || true)
-            if [ "$HTTP" = '200' ] && [ -s /tmp/check.mp4 ]; then
-              exit 0
-            fi
+            if [ "$HTTP" = '200' ] && [ -s /tmp/check.mp4 ]; then exit 0; fi
             sleep 3
           done
           exit 1
 
-      - name: Publish native Reel test to Instagram
+      - name: Publish native Reel to Instagram
+        id: publish
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
         shell: bash
         env:
           TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
           VIDEO_URL: ${{ steps.video.outputs.url }}
-          CAPTION: 'TEST TECNICO Kairon — Reel nativo 9:16 1080×1920. Verifica formato senza crop o ridimensionamento. #KaironLabsStudio #ReelTest #WebDesign #SocialAutomation'
+          CAPTION: ${{ steps.pick.outputs.caption }}
         run: |
           set -euo pipefail
-          ME=$(curl -sS -H "Authorization: Bearer $TOKEN" 'https://graph.instagram.com/me?fields=id,username')
+          HTTP_ME=$(curl -sS -o /tmp/instagram-me.json -w '%{http_code}' -H "Authorization: Bearer $TOKEN" 'https://graph.instagram.com/me?fields=id,username')
+          ME=$(cat /tmp/instagram-me.json)
+          echo "Instagram account check HTTP=$HTTP_ME"
+          if [ "$HTTP_ME" -lt 200 ] || [ "$HTTP_ME" -ge 300 ]; then
+            ERROR_MSG=$(echo "$ME" | jq -r '.error.message // .message // "unknown error"')
+            echo "Instagram account error: $ERROR_MSG"
+            exit 1
+          fi
           IG=$(echo "$ME" | jq -r '.id // empty')
           USERNAME=$(echo "$ME" | jq -r '.username // empty')
           test -n "$IG"
           test "$USERNAME" = 'kaironlabsstudio'
 
-          CREATE=$(curl -sS -X POST "https://graph.instagram.com/$IG/media" \
-            -H "Authorization: Bearer $TOKEN" \
-            --data-urlencode 'media_type=REELS' \
-            --data-urlencode "video_url=$VIDEO_URL" \
-            --data-urlencode "caption=$CAPTION" \
-            --data-urlencode 'share_to_feed=true')
-          echo "CREATE=$CREATE"
+          HTTP_CREATE=$(curl -sS -o /tmp/instagram-create.json -w '%{http_code}' -X POST "https://graph.instagram.com/$IG/media" -H "Authorization: Bearer $TOKEN" --data-urlencode 'media_type=REELS' --data-urlencode "video_url=$VIDEO_URL" --data-urlencode "caption=$CAPTION" --data-urlencode 'share_to_feed=true')
+          CREATE=$(cat /tmp/instagram-create.json)
+          echo "Instagram Reel create HTTP=$HTTP_CREATE"
+          if [ "$HTTP_CREATE" -lt 200 ] || [ "$HTTP_CREATE" -ge 300 ]; then
+            ERROR_MSG=$(echo "$CREATE" | jq -r '.error.message // .message // "unknown error"')
+            echo "Instagram Reel create error: $ERROR_MSG"
+            exit 1
+          fi
           CID=$(echo "$CREATE" | jq -r '.id // empty')
           test -n "$CID"
 
@@ -158,16 +241,41 @@ jobs:
           for i in {1..30}; do
             STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code,status")
             CODE=$(echo "$STATUS" | jq -r '.status_code // empty')
-            echo "STATUS_$i=$STATUS"
+            echo "Instagram Reel container status $i: $CODE"
             if [ "$CODE" = 'FINISHED' ]; then READY=true; break; fi
-            if [ "$CODE" = 'ERROR' ] || [ "$CODE" = 'EXPIRED' ]; then exit 1; fi
+            if [ "$CODE" = 'ERROR' ] || [ "$CODE" = 'EXPIRED' ]; then echo "$STATUS"; exit 1; fi
             sleep 10
           done
           test "$READY" = true
 
-          PUB=$(curl -sS -X POST "https://graph.instagram.com/$IG/media_publish" \
-            -H "Authorization: Bearer $TOKEN" \
-            --data-urlencode "creation_id=$CID")
-          echo "PUBLISH=$PUB"
+          HTTP_PUB=$(curl -sS -o /tmp/instagram-publish.json -w '%{http_code}' -X POST "https://graph.instagram.com/$IG/media_publish" -H "Authorization: Bearer $TOKEN" --data-urlencode "creation_id=$CID")
+          PUB=$(cat /tmp/instagram-publish.json)
+          echo "Instagram Reel publish HTTP=$HTTP_PUB"
+          if [ "$HTTP_PUB" -lt 200 ] || [ "$HTTP_PUB" -ge 300 ]; then
+            ERROR_MSG=$(echo "$PUB" | jq -r '.error.message // .message // "unknown error"')
+            echo "Instagram Reel publish error: $ERROR_MSG"
+            exit 1
+          fi
           MID=$(echo "$PUB" | jq -r '.id // empty')
           test -n "$MID"
+          echo "media_id=$MID" >> "$GITHUB_OUTPUT"
+
+      - name: Advance weekly Reel queue after success
+        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true' && success()
+        shell: bash
+        env:
+          IDX: ${{ steps.pick.outputs.index }}
+          TITLE: ${{ steps.pick.outputs.title }}
+          MEDIA_ID: ${{ steps.publish.outputs.media_id }}
+        run: |
+          set -euo pipefail
+          git config user.name 'Kairon Auto Social'
+          git config user.email 'kaironlabsstudio@gmail.com'
+          git pull --rebase
+          NEXT=$(( (IDX + 1) % 7 ))
+          printf '%s\n' "$NEXT" > state/premium_reel_index.txt
+          TZ=Europe/Rome date +%F > state/premium_reel_last_date.txt
+          printf '%s\n' "$MEDIA_ID" > state/premium_reel_last_media_id.txt
+          git add state/premium_reel_index.txt state/premium_reel_last_date.txt state/premium_reel_last_media_id.txt
+          git commit -m "Advance Kairon weekly native Reel queue after ${TITLE}"
+          git push origin HEAD:main
