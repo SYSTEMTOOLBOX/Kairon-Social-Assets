@@ -1,136 +1,83 @@
-name: Kairon Daily Premium Post
+name: Kairon Native 4x5 Post Test
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: kairon-daily-premium-post
+  group: kairon-native-4x5-post-test
   cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Verify premium assets
+      - name: Verify native 4x5 test asset
         shell: bash
         run: |
           set -euo pipefail
-          test -f approved/gioielleria-post.jpg
-          test -f approved/parrucchiere-post.jpg
-          test -f today/kairon-pizzeria.jpg
-          test -f state/premium_post_index.txt
-
-      - name: Gate manual Post test
-        id: gate
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo 'should_publish=true' >> "$GITHUB_OUTPUT"
-          echo "Manual-only mode while native 4x5 masters are rebuilt"
-
-      - name: Skip if a premium post was already published today
-        id: daily
-        shell: bash
-        run: |
-          set -euo pipefail
-          TODAY=$(TZ=Europe/Rome date +%F)
-          LAST=''
-          [ -f state/premium_post_last_date.txt ] && LAST=$(tr -d '\r\n ' < state/premium_post_last_date.txt)
-          if [ "$TODAY" = "$LAST" ]; then
-            echo 'already_posted=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'already_posted=false' >> "$GITHUB_OUTPUT"
-          fi
-          echo "TODAY=$TODAY LAST=$LAST"
-
-      - name: Choose next approved premium post
-        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
-        id: pick
-        shell: bash
-        run: |
-          set -euo pipefail
-          IDX=$(tr -d '\r\n ' < state/premium_post_index.txt)
-          case "$IDX" in
-            0) FILE='approved/gioielleria-post.jpg'; TITLE='GIOIELLERIA'; CAPTION='Sito web per gioielleria ✨ Eleganza, prestigio e presenza digitale su misura. Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #Gioielleria #SitoWeb #WebDesign' ;;
-            1) FILE='approved/parrucchiere-post.jpg'; TITLE='PARRUCCHIERE'; CAPTION='Sito web per parrucchiere ✂️ Immagine premium, prenotazioni e contatto diretto. Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #Parrucchiere #SitoWeb #WebDesign' ;;
-            2) FILE='today/kairon-pizzeria.jpg'; TITLE='PIZZERIA'; CAPTION='Sito web per pizzeria 🍕 Menu, prenotazioni e contatti con una presenza digitale che fa venire fame. Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #Pizzeria #SitoWeb #WebDesign' ;;
-            *) echo "Invalid premium post index: $IDX"; exit 1 ;;
-          esac
-          test -f "$FILE"
-          echo "index=$IDX" >> "$GITHUB_OUTPUT"
-          echo "file=$FILE" >> "$GITHUB_OUTPUT"
-          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
-          {
-            echo 'caption<<EOF'
-            echo "$CAPTION"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Ensure ffmpeg is installed
-        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
+          FILE='approved/kairon-test-post-1080x1350.jpg'
+          test -s "$FILE"
           if ! command -v ffprobe >/dev/null 2>&1; then
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-          command -v ffprobe
+          DIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$FILE")
+          echo "Native asset dimensions: $DIM"
+          test "$DIM" = '1080x1350'
 
-      - name: Prepare Instagram 4x5 premium post
-        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
+      - name: Prepare direct native image URL
         id: image
         shell: bash
-        env:
-          SOURCE: ${{ steps.pick.outputs.file }}
         run: |
           set -euo pipefail
-          RAW="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/${SOURCE}"
-          ENCODED=$(RAW="$RAW" python3 -c 'import os,urllib.parse; print(urllib.parse.quote(os.environ["RAW"], safe=""))')
-          URL="https://wsrv.nl/?url=${ENCODED}&w=1080&h=1350&fit=contain&cbg=000000&output=jpg&q=92"
-          HTTP=$(curl -L --fail --retry 3 --retry-delay 2 -sS -o /tmp/post-4x5.jpg -w '%{http_code}' "$URL")
-          echo "HTTP=$HTTP"
+          URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/approved/kairon-test-post-1080x1350.jpg"
+          HTTP=$(curl -L --fail --retry 3 --retry-delay 2 -sS -o /tmp/native-post.jpg -w '%{http_code}' "$URL")
+          echo "Raw image HTTP=$HTTP"
           test "$HTTP" = '200'
-          test -s /tmp/post-4x5.jpg
-          DIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 /tmp/post-4x5.jpg)
-          echo "Transformed dimensions: $DIM"
+          test -s /tmp/native-post.jpg
+          DIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 /tmp/native-post.jpg)
+          echo "Downloaded native dimensions: $DIM"
           test "$DIM" = '1080x1350'
           echo "url=$URL" >> "$GITHUB_OUTPUT"
 
-      - name: Publish premium post to Instagram
+      - name: Publish native 4x5 test to Instagram
         id: publish
-        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
         shell: bash
         env:
           TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
           IMAGE_URL: ${{ steps.image.outputs.url }}
-          CAPTION: ${{ steps.pick.outputs.caption }}
+          CAPTION: 'TEST TECNICO Kairon — Post nativo 4:5 1080×1350. Verifica formato senza ridimensionamento.'
         run: |
           set -euo pipefail
-          HTTP_ME=$(curl -sS -o /tmp/instagram-me.json -w '%{http_code}' -H "Authorization: Bearer $TOKEN" 'https://graph.instagram.com/me?fields=id,username')
+
+          HTTP_ME=$(curl -sS -o /tmp/instagram-me.json -w '%{http_code}' \
+            -H "Authorization: Bearer $TOKEN" \
+            'https://graph.instagram.com/me?fields=id,username')
           ME=$(cat /tmp/instagram-me.json)
           echo "Instagram account check HTTP=$HTTP_ME"
           if [ "$HTTP_ME" -lt 200 ] || [ "$HTTP_ME" -ge 300 ]; then
-            ERROR_TYPE=$(echo "$ME" | jq -r '.error.type // empty')
-            ERROR_CODE=$(echo "$ME" | jq -r '.error.code // empty')
             ERROR_MSG=$(echo "$ME" | jq -r '.error.message // .message // "unknown error"')
-            echo "Instagram account error: type=$ERROR_TYPE code=$ERROR_CODE message=$ERROR_MSG"
+            echo "Instagram account error: $ERROR_MSG"
             exit 1
           fi
+
           IG=$(echo "$ME" | jq -r '.id // empty')
           USERNAME=$(echo "$ME" | jq -r '.username // empty')
-          echo "Instagram account id=$IG username=$USERNAME"
+          echo "Instagram username=$USERNAME"
           test -n "$IG"
           test "$USERNAME" = 'kaironlabsstudio'
-          HTTP_CREATE=$(curl -sS -o /tmp/instagram-create.json -w '%{http_code}' -X POST "https://graph.instagram.com/$IG/media" -H "Authorization: Bearer $TOKEN" --data-urlencode "image_url=$IMAGE_URL" --data-urlencode "caption=$CAPTION")
+
+          HTTP_CREATE=$(curl -sS -o /tmp/instagram-create.json -w '%{http_code}' -X POST \
+            "https://graph.instagram.com/$IG/media" \
+            -H "Authorization: Bearer $TOKEN" \
+            --data-urlencode "image_url=$IMAGE_URL" \
+            --data-urlencode "caption=$CAPTION")
           CREATE=$(cat /tmp/instagram-create.json)
           echo "Instagram media create HTTP=$HTTP_CREATE"
           if [ "$HTTP_CREATE" -lt 200 ] || [ "$HTTP_CREATE" -ge 300 ]; then
@@ -138,19 +85,29 @@ jobs:
             echo "Instagram media create error: $ERROR_MSG"
             exit 1
           fi
+
           CID=$(echo "$CREATE" | jq -r '.id // empty')
           test -n "$CID"
+
           READY=false
           for i in {1..20}; do
-            STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code,status")
+            STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" \
+              "https://graph.instagram.com/$CID?fields=status_code,status")
             CODE=$(echo "$STATUS" | jq -r '.status_code // empty')
             echo "Instagram container status $i: $CODE"
             if [ "$CODE" = 'FINISHED' ]; then READY=true; break; fi
-            if [ "$CODE" = 'ERROR' ] || [ "$CODE" = 'EXPIRED' ]; then exit 1; fi
+            if [ "$CODE" = 'ERROR' ] || [ "$CODE" = 'EXPIRED' ]; then
+              echo "$STATUS"
+              exit 1
+            fi
             sleep 3
           done
           test "$READY" = true
-          HTTP_PUB=$(curl -sS -o /tmp/instagram-publish.json -w '%{http_code}' -X POST "https://graph.instagram.com/$IG/media_publish" -H "Authorization: Bearer $TOKEN" --data-urlencode "creation_id=$CID")
+
+          HTTP_PUB=$(curl -sS -o /tmp/instagram-publish.json -w '%{http_code}' -X POST \
+            "https://graph.instagram.com/$IG/media_publish" \
+            -H "Authorization: Bearer $TOKEN" \
+            --data-urlencode "creation_id=$CID")
           PUB=$(cat /tmp/instagram-publish.json)
           echo "Instagram media publish HTTP=$HTTP_PUB"
           if [ "$HTTP_PUB" -lt 200 ] || [ "$HTTP_PUB" -ge 300 ]; then
@@ -158,28 +115,7 @@ jobs:
             echo "Instagram media publish error: $ERROR_MSG"
             exit 1
           fi
+
           MID=$(echo "$PUB" | jq -r '.id // empty')
           test -n "$MID"
           echo "Instagram published media id=$MID"
-          echo "media_id=$MID" >> "$GITHUB_OUTPUT"
-
-      - name: Advance premium post queue after success
-        if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true' && success()
-        shell: bash
-        env:
-          IDX: ${{ steps.pick.outputs.index }}
-          TITLE: ${{ steps.pick.outputs.title }}
-          MEDIA_ID: ${{ steps.publish.outputs.media_id }}
-        run: |
-          set -euo pipefail
-          git config user.name 'Kairon Auto Social'
-          git config user.email 'kaironlabsstudio@gmail.com'
-          git fetch origin main
-          git checkout -B main origin/main
-          NEXT=$(( (IDX + 1) % 3 ))
-          printf '%s\n' "$NEXT" > state/premium_post_index.txt
-          TZ=Europe/Rome date +%F > state/premium_post_last_date.txt
-          printf '%s\n' "$MEDIA_ID" > state/premium_post_last_media_id.txt
-          git add state/premium_post_index.txt state/premium_post_last_date.txt state/premium_post_last_media_id.txt
-          git commit -m "Advance Kairon premium post queue after ${TITLE}"
-          git push origin HEAD:main
