@@ -116,65 +116,94 @@ jobs:
           echo "Native Reel asset dimensions: $DIM"
           test "$DIM" = '1080x1920'
 
-      - name: Build deep Kairon cinematic audio
+      - name: Build fixed Kairon lounge aperitivo audio
         if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
         shell: bash
         run: |
           python - <<'PY'
-          import wave, math, struct
-          sr=48000
-          dur=9.0
-          n=int(sr*dur)
-          frames=[]
-          def smoothstep(x):
+          import math, wave, struct
+          sr = 48000
+          dur = 9.0
+          n = int(sr * dur)
+          chords = [
+              [110.00, 130.81, 164.81, 196.00],
+              [146.83, 174.61, 220.00, 261.63],
+              [98.00, 123.47, 146.83, 196.00],
+              [130.81, 164.81, 196.00, 246.94],
+          ]
+          def smooth(x):
               x=max(0.0,min(1.0,x))
-              return x*x*(3.0-2.0*x)
-          with wave.open('/tmp/kairon.wav','wb') as w:
+              return x*x*(3-2*x)
+          def rhodes(freq,t):
+              return (0.72*math.sin(2*math.pi*freq*t) +
+                      0.20*math.sin(2*math.pi*2*freq*t) +
+                      0.08*math.sin(2*math.pi*3*freq*t))
+          def softclip(x):
+              return math.tanh(x)
+          frames=[]
+          for i in range(n):
+              t=i/sr
+              idx=min(int(t//2.0),3)
+              local=t-idx*2.0
+              attack=smooth(local/0.08)
+              release=1.0 if local < 1.65 else smooth((2.0-local)/0.35)
+              pad=0.0
+              for f in chords[idx]:
+                  pad += 0.045*rhodes(f,t)
+              pad *= attack*release
+              bass_notes=[55.0,73.42,49.0,65.41]
+              bf=bass_notes[idx]
+              bass_env=0.85+0.15*math.sin(2*math.pi*0.5*local)
+              bass=0.16*math.sin(2*math.pi*bf*t)*bass_env + 0.05*math.sin(2*math.pi*(bf*2)*t)
+              bpm=92
+              beat=60/bpm
+              phase=t%beat
+              kick=0.0
+              if phase < 0.18:
+                  x=phase
+                  kick=0.18*math.sin(2*math.pi*(60-30*x)*x)*math.exp(-18*x)
+              shaker=0.0
+              eighth=beat/2
+              ph2=t%eighth
+              if ph2 < 0.06:
+                  x=ph2
+                  pseudo=(math.sin(2*math.pi*317*t)+0.6*math.sin(2*math.pi*421*t)+0.35*math.sin(2*math.pi*653*t))
+                  shaker=0.018*pseudo*math.exp(-38*x)
+              pluck=0.0
+              motif_times=[0.5,1.15,2.55,3.2,4.55,5.2,6.55,7.2]
+              motif_freq=[329.63,392.00,349.23,440.00,392.00,493.88,329.63,392.00]
+              for st,f in zip(motif_times,motif_freq):
+                  x=t-st
+                  if 0<=x<0.45:
+                      pluck += 0.045*math.sin(2*math.pi*f*x)*math.exp(-7*x)
+              sparkle=0.0
+              x=t-0.12
+              if 0<=x<1.1:
+                  sparkle=0.018*math.sin(2*math.pi*880*x)*math.exp(-3.2*x)
+              fade_in=smooth(t/0.12)
+              fade_out=1.0 if t<8.35 else smooth((9.0-t)/0.65)
+              s=(pad+bass+kick+shaker+pluck+sparkle)*fade_in*fade_out
+              s=0.88*softclip(s*1.55)
+              pan=0.5+0.18*math.sin(2*math.pi*0.09*t)
+              l=int(max(-1,min(1,s*(1.15-pan*0.25)))*32767)
+              r=int(max(-1,min(1,s*(0.90+pan*0.25)))*32767)
+              frames.append(struct.pack('<hh',l,r))
+          with wave.open('/tmp/kairon-lounge.wav','wb') as w:
               w.setnchannels(2)
               w.setsampwidth(2)
               w.setframerate(sr)
-              for i in range(n):
-                  t=i/sr
-                  master=max(0.0,min(1.0,(9.0-t)/0.75))
-                  bed=(math.sin(2*math.pi*36.7*t)*0.20 + math.sin(2*math.pi*55.0*t)*0.105 + math.sin(2*math.pi*73.4*t)*0.052)
-                  bed*=min(1.0,t/1.0)*master
-                  b_env=smoothstep((t-1.0)/3.2) * max(0.0,min(1.0,(6.2-t)/0.9))
-                  brass=(math.sin(2*math.pi*98.0*t)*0.060 + math.sin(2*math.pi*130.81*t)*0.043 + math.sin(2*math.pi*196.0*t)*0.018)*b_env
-                  drums=0.0
-                  for st,g,f in [(1.65,.13,54),(2.45,.16,50),(3.15,.20,46),(3.72,.25,43),(4.18,.34,40)]:
-                      x=t-st
-                      if 0.0<=x<1.0:
-                          drums += g*math.sin(2*math.pi*(f+10*math.exp(-7*x))*x)*math.exp(-5.0*x)
-                  impact=0.0
-                  x=t-4.42
-                  if 0.0<=x<1.7:
-                      sub=(math.sin(2*math.pi*(34+18*math.exp(-2*x))*x)*0.58 + math.sin(2*math.pi*48*x)*0.25)*math.exp(-2.5*x)
-                      low=(math.sin(2*math.pi*98*x)*0.14 + math.sin(2*math.pi*130.81*x)*0.085 + math.sin(2*math.pi*196*x)*0.042)*math.exp(-2.2*x)
-                      impact=sub+low
-                  tail=0.0
-                  x=t-4.55
-                  if 0.0<=x<3.4:
-                      tail=(math.sin(2*math.pi*110.0*x)*0.060 + math.sin(2*math.pi*164.81*x)*0.034 + math.sin(2*math.pi*220.0*x)*0.014)*math.exp(-0.85*x)
-                  accent=0.0
-                  x=t-6.65
-                  if 0.0<=x<1.2:
-                      accent=(math.sin(2*math.pi*73.4*x)*0.17 + math.sin(2*math.pi*110*x)*0.075)*math.exp(-4.0*x)
-                  s=(bed+brass+drums+impact+tail+accent)*master
-                  s=max(-0.92,min(0.92,s))
-                  v=int(s*32767)
-                  frames.append(struct.pack('<hh',v,v))
               w.writeframes(b''.join(frames))
           PY
 
-      - name: Render native Reel without crop or resize
+      - name: Render native Reel with fixed lounge audio
         if: steps.gate.outputs.should_publish == 'true' && steps.daily.outputs.already_posted != 'true'
         shell: bash
         env:
           IMAGE: ${{ steps.pick.outputs.file }}
         run: |
           set -euo pipefail
-          ffmpeg -y -loop 1 -framerate 25 -i "$IMAGE" -i /tmp/kairon.wav \
-            -filter_complex "[0:v]fade=t=out:st=8.4:d=0.6,format=yuv420p[v];[1:a]lowpass=f=850,volume=1.0[a]" \
+          ffmpeg -y -loop 1 -framerate 25 -i "$IMAGE" -i /tmp/kairon-lounge.wav \
+            -filter_complex "[0:v]fade=t=out:st=8.4:d=0.6,format=yuv420p[v];[1:a]volume=1.0[a]" \
             -map '[v]' -map '[a]' -t 9 -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p -c:a aac -b:a 160k -movflags +faststart /tmp/kairon-premium-reel.mp4
           DIM=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 /tmp/kairon-premium-reel.mp4)
           echo "Rendered Reel dimensions: $DIM"
@@ -225,7 +254,6 @@ jobs:
           USERNAME=$(echo "$ME" | jq -r '.username // empty')
           test -n "$IG"
           test "$USERNAME" = 'kaironlabsstudio'
-
           HTTP_CREATE=$(curl -sS -o /tmp/instagram-create.json -w '%{http_code}' -X POST "https://graph.instagram.com/$IG/media" -H "Authorization: Bearer $TOKEN" --data-urlencode 'media_type=REELS' --data-urlencode "video_url=$VIDEO_URL" --data-urlencode "caption=$CAPTION" --data-urlencode 'share_to_feed=true')
           CREATE=$(cat /tmp/instagram-create.json)
           echo "Instagram Reel create HTTP=$HTTP_CREATE"
@@ -236,7 +264,6 @@ jobs:
           fi
           CID=$(echo "$CREATE" | jq -r '.id // empty')
           test -n "$CID"
-
           READY=false
           for i in {1..30}; do
             STATUS=$(curl -sS -H "Authorization: Bearer $TOKEN" "https://graph.instagram.com/$CID?fields=status_code,status")
@@ -247,7 +274,6 @@ jobs:
             sleep 10
           done
           test "$READY" = true
-
           HTTP_PUB=$(curl -sS -o /tmp/instagram-publish.json -w '%{http_code}' -X POST "https://graph.instagram.com/$IG/media_publish" -H "Authorization: Bearer $TOKEN" --data-urlencode "creation_id=$CID")
           PUB=$(cat /tmp/instagram-publish.json)
           echo "Instagram Reel publish HTTP=$HTTP_PUB"
