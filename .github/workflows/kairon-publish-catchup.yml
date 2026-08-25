@@ -21,6 +21,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          echo 'Catch-up retry: 2026-08-25 PALESTRA'
           code=$(curl -sS -o /tmp/dispatch.json -w '%{http_code}' \
             -X POST "https://api.github.com/repos/$REPO/actions/workflows/kairon-daily-premium-reel.yml/dispatches" \
             -H "Authorization: Bearer $GH_TOKEN" \
