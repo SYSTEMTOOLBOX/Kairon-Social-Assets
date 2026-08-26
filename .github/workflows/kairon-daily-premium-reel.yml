@@ -254,7 +254,7 @@ jobs:
           USERNAME=$(echo "$ME" | jq -r '.username // empty')
           test -n "$IG"
           test "$USERNAME" = 'kaironlabsstudio'
-          HTTP_CREATE=$(curl -sS -o /tmp/instagram-create.json -w '%{http_code}' -X POST "https://graph.instagram.com/$IG/media" -H "Authorization: Bearer $TOKEN" --data-urlencode 'media_type=REELS' --data-urlencode "video_url=$VIDEO_URL" --data-urlencode "caption=$CAPTION" --data-urlencode 'share_to_feed=true')
+          HTTP_CREATE=$(curl -sS -o /tmp/instagram-create.json -w '%{http_code}' -X POST "https://graph.instagram.com/$IG/media" -H "Authorization: Bearer $TOKEN" --data-urlencode 'media_type=REELS' --data-urlencode "video_url=$VIDEO_URL" --data-urlencode "caption=$CAPTION" --data-urlencode 'share_to_feed=false')
           CREATE=$(cat /tmp/instagram-create.json)
           echo "Instagram Reel create HTTP=$HTTP_CREATE"
           if [ "$HTTP_CREATE" -lt 200 ] || [ "$HTTP_CREATE" -ge 300 ]; then
