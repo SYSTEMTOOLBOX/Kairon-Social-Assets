@@ -1,0 +1,1684 @@
+{
+  "schema": 1,
+  "account": "kaironlabsstudio",
+  "checked_at_utc": "2026-08-26T14:54:22.593485+00:00",
+  "local_date": "2026-08-26",
+  "profile": {
+    "id": "28419645274307525",
+    "username": "kaironlabsstudio",
+    "followers_count": 2,
+    "media_count": 10
+  },
+  "account_insights": {
+    "reach": [
+      {
+        "name": "reach",
+        "period": "day",
+        "values": [
+          {
+            "value": 1,
+            "end_time": "2026-08-25T07:00:00+0000"
+          },
+          {
+            "value": 1,
+            "end_time": "2026-08-26T07:00:00+0000"
+          }
+        ],
+        "title": "Reach",
+        "description": "Total number of times the Business Account's media objects have been uniquely viewed",
+        "id": "17841438395450317/insights/reach/day"
+      }
+    ],
+    "profile_views": [],
+    "views": [],
+    "accounts_engaged": [],
+    "total_interactions": [],
+    "likes": [],
+    "comments": [],
+    "shares": [],
+    "saves": [],
+    "follower_count": [],
+    "follows_and_unfollows": [],
+    "profile_links_taps": []
+  },
+  "recent_media": [
+    {
+      "id": "18068604275570537",
+      "caption": "La tua palestra merita una presenza online che motiva ancora prima di entrare. 💪 Più visibilità, più iscritti, più clienti. #KaironLabsStudio #Palestra #SitoWeb #WebDesign",
+      "media_type": "VIDEO",
+      "media_product_type": "REELS",
+      "permalink": "https://www.instagram.com/reel/DceL18jFA0V/",
+      "timestamp": "2026-08-25T17:34:51+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 1
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this reel, at least once. Reach is different from impressions, which may include multiple views of your reel by the same accounts. This metric is estimated.",
+            "id": "18068604275570537/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 2
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your reels was played or displayed.",
+            "id": "18068604275570537/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your reel.",
+            "id": "18068604275570537/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your reel.",
+            "id": "18068604275570537/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your reel.",
+            "id": "18068604275570537/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your reel.",
+            "id": "18068604275570537/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Reels interactions",
+            "description": "The number of likes, saves, comments and shares on your reels minus the number of unlikes, unsaves and deleted comments.",
+            "id": "18068604275570537/insights/total_interactions/lifetime"
+          }
+        ],
+        "ig_reels_avg_watch_time": [
+          {
+            "name": "ig_reels_avg_watch_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 6503
+              }
+            ],
+            "title": "Reels Average Watch Time (milliseconds)",
+            "description": "This body communicates the definition for reels average watch time",
+            "id": "18068604275570537/insights/ig_reels_avg_watch_time/lifetime"
+          }
+        ],
+        "ig_reels_video_view_total_time": [
+          {
+            "name": "ig_reels_video_view_total_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 13006
+              }
+            ],
+            "title": "Video View Total Time (milliseconds)",
+            "description": "This body communicates the definition for reels video view watch time",
+            "id": "18068604275570537/insights/ig_reels_video_view_total_time/lifetime"
+          }
+        ],
+        "reels_skip_rate": [
+          {
+            "name": "reels_skip_rate",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Skip Rate",
+            "description": "The percentage of views from people who skipped during the first 3 seconds of your reel. This is calculated as the number of views that skipped your reel during the first 3 seconds divided by the number of initial views. An initial view is when your reel starts to play for the first time in a reel session.",
+            "id": "18068604275570537/insights/reels_skip_rate/lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "18188433835392174",
+      "caption": "Più iscritti, prenotazioni semplici e una presenza digitale professionale. 💪 Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #Palestra #WebDesign #SitoWeb",
+      "media_type": "IMAGE",
+      "media_product_type": "FEED",
+      "permalink": "https://www.instagram.com/p/DceEL41GnQH/",
+      "timestamp": "2026-08-25T16:27:39+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this post, at least once. Reach is different from impressions, which may include multiple views of your post by the same accounts. This metric is estimated.",
+            "id": "18188433835392174/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your post was played or displayed.",
+            "id": "18188433835392174/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your post.",
+            "id": "18188433835392174/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your post.",
+            "id": "18188433835392174/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your post.",
+            "id": "18188433835392174/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your post.",
+            "id": "18188433835392174/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Post interactions",
+            "description": "The number of likes, saves, comments and shares on your post minus the number of unlikes, unsaves and deleted comments.",
+            "id": "18188433835392174/insights/total_interactions/lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "18146218567531830",
+      "caption": "Fai vedere il vero valore dei tuoi immobili. 🏡 Un sito professionale aumenta credibilità, contatti e opportunità. Richiedi una demo a Kairon Labs Studio. #KaironLabsStudio #AgenziaImmobiliare #SitoWeb #WebDesign",
+      "media_type": "VIDEO",
+      "media_product_type": "REELS",
+      "permalink": "https://www.instagram.com/reel/Dcbl3VFAn7E/",
+      "timestamp": "2026-08-24T17:24:33+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 1
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this reel, at least once. Reach is different from impressions, which may include multiple views of your reel by the same accounts. This metric is estimated.",
+            "id": "18146218567531830/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 2
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your reels was played or displayed.",
+            "id": "18146218567531830/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your reel.",
+            "id": "18146218567531830/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your reel.",
+            "id": "18146218567531830/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your reel.",
+            "id": "18146218567531830/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your reel.",
+            "id": "18146218567531830/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Reels interactions",
+            "description": "The number of likes, saves, comments and shares on your reels minus the number of unlikes, unsaves and deleted comments.",
+            "id": "18146218567531830/insights/total_interactions/lifetime"
+          }
+        ],
+        "ig_reels_avg_watch_time": [
+          {
+            "name": "ig_reels_avg_watch_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 24364
+              }
+            ],
+            "title": "Reels Average Watch Time (milliseconds)",
+            "description": "This body communicates the definition for reels average watch time",
+            "id": "18146218567531830/insights/ig_reels_avg_watch_time/lifetime"
+          }
+        ],
+        "ig_reels_video_view_total_time": [
+          {
+            "name": "ig_reels_video_view_total_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 73092
+              }
+            ],
+            "title": "Video View Total Time (milliseconds)",
+            "description": "This body communicates the definition for reels video view watch time",
+            "id": "18146218567531830/insights/ig_reels_video_view_total_time/lifetime"
+          }
+        ],
+        "reels_skip_rate": [
+          {
+            "name": "reels_skip_rate",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 50
+              }
+            ],
+            "title": "Skip Rate",
+            "description": "The percentage of views from people who skipped during the first 3 seconds of your reel. This is calculated as the number of views that skipped your reel during the first 3 seconds divided by the number of initial views. An initial view is when your reel starts to play for the first time in a reel session.",
+            "id": "18146218567531830/insights/reels_skip_rate/lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "17977427487082222",
+      "caption": "Sito web per gioielleria ✨\n\nEleganza, sicurezza e prestigio online. Catalogo digitale, vetrina online e contatti rapidi per valorizzare il tuo brand.\n\nRichiedi una demo a Kairon Labs Studio.\n\n#KaironLabsStudio #Gioielleria #SitoWeb #WebDesign #SitiWeb #VetrinaOnline",
+      "media_type": "IMAGE",
+      "media_product_type": "FEED",
+      "permalink": "https://www.instagram.com/p/Db89KTfH88M/",
+      "timestamp": "2026-08-12T19:51:25+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this post, at least once. Reach is different from impressions, which may include multiple views of your post by the same accounts. This metric is estimated.",
+            "id": "17977427487082222/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your post was played or displayed.",
+            "id": "17977427487082222/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your post.",
+            "id": "17977427487082222/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your post.",
+            "id": "17977427487082222/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your post.",
+            "id": "17977427487082222/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your post.",
+            "id": "17977427487082222/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Post interactions",
+            "description": "The number of likes, saves, comments and shares on your post minus the number of unlikes, unsaves and deleted comments.",
+            "id": "17977427487082222/insights/total_interactions/lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "17985802836016871",
+      "caption": "Sito web per parrucchiere ✂️\\n\\nUn’immagine professionale online, prenotazioni più semplici e un sito pensato per valorizzare il tuo salone.\\n\\nRichiedi una demo a Kairon Labs Studio.\\n\\n#KaironLabsStudio #SitoWeb #Parrucchiere #WebDesign #SitiWeb",
+      "media_type": "IMAGE",
+      "media_product_type": "FEED",
+      "permalink": "https://www.instagram.com/p/Db6cl8TFpXv/",
+      "timestamp": "2026-08-11T20:28:28+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 2
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this post, at least once. Reach is different from impressions, which may include multiple views of your post by the same accounts. This metric is estimated.",
+            "id": "17985802836016871/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 3
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your post was played or displayed.",
+            "id": "17985802836016871/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your post.",
+            "id": "17985802836016871/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your post.",
+            "id": "17985802836016871/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your post.",
+            "id": "17985802836016871/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your post.",
+            "id": "17985802836016871/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Post interactions",
+            "description": "The number of likes, saves, comments and shares on your post minus the number of unlikes, unsaves and deleted comments.",
+            "id": "17985802836016871/insights/total_interactions/lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "18159383509468403",
+      "caption": "Eleganza, stile e prenotazioni online. Prenotazioni online, Servizi e listino, Contatto WhatsApp. Vuoi vedere una demo gratuita per la tua attività? Scrivici in DM o visita il link in bio. #KaironLabsStudio #SitiWeb #WebDesign #Business #Digitale",
+      "media_type": "VIDEO",
+      "media_product_type": "REELS",
+      "permalink": "https://www.instagram.com/reel/Db3lM_LDNHl/",
+      "timestamp": "2026-08-10T17:46:08+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 3
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this reel, at least once. Reach is different from impressions, which may include multiple views of your reel by the same accounts. This metric is estimated.",
+            "id": "18159383509468403/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 3
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your reels was played or displayed.",
+            "id": "18159383509468403/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your reel.",
+            "id": "18159383509468403/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your reel.",
+            "id": "18159383509468403/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your reel.",
+            "id": "18159383509468403/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your reel.",
+            "id": "18159383509468403/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Reels interactions",
+            "description": "The number of likes, saves, comments and shares on your reels minus the number of unlikes, unsaves and deleted comments.",
+            "id": "18159383509468403/insights/total_interactions/lifetime"
+          }
+        ],
+        "ig_reels_avg_watch_time": [
+          {
+            "name": "ig_reels_avg_watch_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 7553
+              }
+            ],
+            "title": "Reels Average Watch Time (milliseconds)",
+            "description": "This body communicates the definition for reels average watch time",
+            "id": "18159383509468403/insights/ig_reels_avg_watch_time/lifetime"
+          }
+        ],
+        "ig_reels_video_view_total_time": [
+          {
+            "name": "ig_reels_video_view_total_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 173724
+              }
+            ],
+            "title": "Video View Total Time (milliseconds)",
+            "description": "This body communicates the definition for reels video view watch time",
+            "id": "18159383509468403/insights/ig_reels_video_view_total_time/lifetime"
+          }
+        ],
+        "reels_skip_rate": [
+          {
+            "name": "reels_skip_rate",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 100
+              }
+            ],
+            "title": "Skip Rate",
+            "description": "The percentage of views from people who skipped during the first 3 seconds of your reel. This is calculated as the number of views that skipped your reel during the first 3 seconds divided by the number of initial views. An initial view is when your reel starts to play for the first time in a reel session.",
+            "id": "18159383509468403/insights/reels_skip_rate/lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "17865432366643355",
+      "caption": "La tua pizzeria merita un sito che faccia venire fame al primo sguardo. Realizziamo siti web su misura per pizzerie e attivita locali. Vuoi vedere una demo gratuita? Scrivici in DM. #KaironLabsStudio #Pizzeria #SitiWeb #WebDesign",
+      "media_type": "VIDEO",
+      "media_product_type": "REELS",
+      "permalink": "https://www.instagram.com/reel/Db1R9wzFXzr/",
+      "timestamp": "2026-08-09T20:19:35+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 4
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this reel, at least once. Reach is different from impressions, which may include multiple views of your reel by the same accounts. This metric is estimated.",
+            "id": "17865432366643355/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 4
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your reels was played or displayed.",
+            "id": "17865432366643355/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your reel.",
+            "id": "17865432366643355/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your reel.",
+            "id": "17865432366643355/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your reel.",
+            "id": "17865432366643355/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your reel.",
+            "id": "17865432366643355/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Reels interactions",
+            "description": "The number of likes, saves, comments and shares on your reels minus the number of unlikes, unsaves and deleted comments.",
+            "id": "17865432366643355/insights/total_interactions/lifetime"
+          }
+        ],
+        "ig_reels_avg_watch_time": [
+          {
+            "name": "ig_reels_avg_watch_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 7151
+              }
+            ],
+            "title": "Reels Average Watch Time (milliseconds)",
+            "description": "This body communicates the definition for reels average watch time",
+            "id": "17865432366643355/insights/ig_reels_avg_watch_time/lifetime"
+          }
+        ],
+        "ig_reels_video_view_total_time": [
+          {
+            "name": "ig_reels_video_view_total_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 114424
+              }
+            ],
+            "title": "Video View Total Time (milliseconds)",
+            "description": "This body communicates the definition for reels video view watch time",
+            "id": "17865432366643355/insights/ig_reels_video_view_total_time/lifetime"
+          }
+        ],
+        "reels_skip_rate": [
+          {
+            "name": "reels_skip_rate",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 100
+              }
+            ],
+            "title": "Skip Rate",
+            "description": "The percentage of views from people who skipped during the first 3 seconds of your reel. This is calculated as the number of views that skipped your reel during the first 3 seconds divided by the number of initial views. An initial view is when your reel starts to play for the first time in a reel session.",
+            "id": "17865432366643355/insights/reels_skip_rate/lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "17965575483131956",
+      "caption": "Siti web su misura per trasformare idee in progetti digitali. Scrivici in DM per una demo gratuita. #KaironLabsStudio #SitiWeb #WebDesign",
+      "media_type": "VIDEO",
+      "media_product_type": "REELS",
+      "permalink": "https://www.instagram.com/reel/DbygGlQCqGg/",
+      "timestamp": "2026-08-08T18:25:27+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 3
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this reel, at least once. Reach is different from impressions, which may include multiple views of your reel by the same accounts. This metric is estimated.",
+            "id": "17965575483131956/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 4
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your reels was played or displayed.",
+            "id": "17965575483131956/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your reel.",
+            "id": "17965575483131956/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your reel.",
+            "id": "17965575483131956/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your reel.",
+            "id": "17965575483131956/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your reel.",
+            "id": "17965575483131956/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Reels interactions",
+            "description": "The number of likes, saves, comments and shares on your reels minus the number of unlikes, unsaves and deleted comments.",
+            "id": "17965575483131956/insights/total_interactions/lifetime"
+          }
+        ],
+        "ig_reels_avg_watch_time": [
+          {
+            "name": "ig_reels_avg_watch_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 5266
+              }
+            ],
+            "title": "Reels Average Watch Time (milliseconds)",
+            "description": "This body communicates the definition for reels average watch time",
+            "id": "17965575483131956/insights/ig_reels_avg_watch_time/lifetime"
+          }
+        ],
+        "ig_reels_video_view_total_time": [
+          {
+            "name": "ig_reels_video_view_total_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 78998
+              }
+            ],
+            "title": "Video View Total Time (milliseconds)",
+            "description": "This body communicates the definition for reels video view watch time",
+            "id": "17965575483131956/insights/ig_reels_video_view_total_time/lifetime"
+          }
+        ],
+        "reels_skip_rate": [
+          {
+            "name": "reels_skip_rate",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 66.7
+              }
+            ],
+            "title": "Skip Rate",
+            "description": "The percentage of views from people who skipped during the first 3 seconds of your reel. This is calculated as the number of views that skipped your reel during the first 3 seconds divided by the number of initial views. An initial view is when your reel starts to play for the first time in a reel session.",
+            "id": "17965575483131956/insights/reels_skip_rate/lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "18117380597309264",
+      "caption": "Kairon Labs Studio - Siti web, web app, applicazioni e sviluppo videogiochi. Hai un progetto in mente? Scrivici in DM.",
+      "media_type": "VIDEO",
+      "media_product_type": "REELS",
+      "permalink": "https://www.instagram.com/reel/DbxGaEvAH0k/",
+      "timestamp": "2026-08-08T05:21:22+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 55
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this reel, at least once. Reach is different from impressions, which may include multiple views of your reel by the same accounts. This metric is estimated.",
+            "id": "18117380597309264/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 63
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your reels was played or displayed.",
+            "id": "18117380597309264/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your reel.",
+            "id": "18117380597309264/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your reel.",
+            "id": "18117380597309264/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your reel.",
+            "id": "18117380597309264/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your reel.",
+            "id": "18117380597309264/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Reels interactions",
+            "description": "The number of likes, saves, comments and shares on your reels minus the number of unlikes, unsaves and deleted comments.",
+            "id": "18117380597309264/insights/total_interactions/lifetime"
+          }
+        ],
+        "ig_reels_avg_watch_time": [
+          {
+            "name": "ig_reels_avg_watch_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 2319
+              }
+            ],
+            "title": "Reels Average Watch Time (milliseconds)",
+            "description": "This body communicates the definition for reels average watch time",
+            "id": "18117380597309264/insights/ig_reels_avg_watch_time/lifetime"
+          }
+        ],
+        "ig_reels_video_view_total_time": [
+          {
+            "name": "ig_reels_video_view_total_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 157733
+              }
+            ],
+            "title": "Video View Total Time (milliseconds)",
+            "description": "This body communicates the definition for reels video view watch time",
+            "id": "18117380597309264/insights/ig_reels_video_view_total_time/lifetime"
+          }
+        ],
+        "reels_skip_rate": [
+          {
+            "name": "reels_skip_rate",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 100
+              }
+            ],
+            "title": "Skip Rate",
+            "description": "The percentage of views from people who skipped during the first 3 seconds of your reel. This is calculated as the number of views that skipped your reel during the first 3 seconds divided by the number of initial views. An initial view is when your reel starts to play for the first time in a reel session.",
+            "id": "18117380597309264/insights/reels_skip_rate/lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "17895266859585800",
+      "caption": "Kairon Labs Studio - Siti web, web app, applicazioni e sviluppo videogiochi. Hai un progetto in mente? Scrivici in DM.",
+      "media_type": "VIDEO",
+      "media_product_type": "REELS",
+      "permalink": "https://www.instagram.com/reel/DbxFDLVkzFb/",
+      "timestamp": "2026-08-08T05:09:44+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 10
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this reel, at least once. Reach is different from impressions, which may include multiple views of your reel by the same accounts. This metric is estimated.",
+            "id": "17895266859585800/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 11
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your reels was played or displayed.",
+            "id": "17895266859585800/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your reel.",
+            "id": "17895266859585800/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your reel.",
+            "id": "17895266859585800/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your reel.",
+            "id": "17895266859585800/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your reel.",
+            "id": "17895266859585800/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Reels interactions",
+            "description": "The number of likes, saves, comments and shares on your reels minus the number of unlikes, unsaves and deleted comments.",
+            "id": "17895266859585800/insights/total_interactions/lifetime"
+          }
+        ],
+        "ig_reels_avg_watch_time": [
+          {
+            "name": "ig_reels_avg_watch_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 3747
+              }
+            ],
+            "title": "Reels Average Watch Time (milliseconds)",
+            "description": "This body communicates the definition for reels average watch time",
+            "id": "17895266859585800/insights/ig_reels_avg_watch_time/lifetime"
+          }
+        ],
+        "ig_reels_video_view_total_time": [
+          {
+            "name": "ig_reels_video_view_total_time",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 52471
+              }
+            ],
+            "title": "Video View Total Time (milliseconds)",
+            "description": "This body communicates the definition for reels video view watch time",
+            "id": "17895266859585800/insights/ig_reels_video_view_total_time/lifetime"
+          }
+        ],
+        "reels_skip_rate": [
+          {
+            "name": "reels_skip_rate",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 90
+              }
+            ],
+            "title": "Skip Rate",
+            "description": "The percentage of views from people who skipped during the first 3 seconds of your reel. This is calculated as the number of views that skipped your reel during the first 3 seconds divided by the number of initial views. An initial view is when your reel starts to play for the first time in a reel session.",
+            "id": "17895266859585800/insights/reels_skip_rate/lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "18336731320253245",
+      "caption": "Kairon Labs Studio | Siti web e web app su misura per attività e professionisti. Hai un progetto in mente? Scrivici in DM. #KaironLabsStudio #SitiWeb #WebApp #DigitalStudio",
+      "media_type": "IMAGE",
+      "media_product_type": "FEED",
+      "permalink": "https://www.instagram.com/p/DbwPO6BHzRG/",
+      "timestamp": "2026-08-07T21:19:15+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this post, at least once. Reach is different from impressions, which may include multiple views of your post by the same accounts. This metric is estimated.",
+            "id": "18336731320253245/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your post was played or displayed.",
+            "id": "18336731320253245/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your post.",
+            "id": "18336731320253245/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your post.",
+            "id": "18336731320253245/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your post.",
+            "id": "18336731320253245/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your post.",
+            "id": "18336731320253245/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Post interactions",
+            "description": "The number of likes, saves, comments and shares on your post minus the number of unlikes, unsaves and deleted comments.",
+            "id": "18336731320253245/insights/total_interactions/lifetime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "18022958867898532",
+      "media_type": "IMAGE",
+      "media_product_type": "FEED",
+      "permalink": "https://www.instagram.com/p/Dbvya2dIluw/",
+      "timestamp": "2026-08-07T17:07:17+0000",
+      "basic_counts": {
+        "like_count": 0,
+        "comments_count": 0
+      },
+      "insights": {
+        "reach": [
+          {
+            "name": "reach",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Accounts reached",
+            "description": "The number of unique accounts that have seen this post, at least once. Reach is different from impressions, which may include multiple views of your post by the same accounts. This metric is estimated.",
+            "id": "18022958867898532/insights/reach/lifetime"
+          }
+        ],
+        "views": [
+          {
+            "name": "views",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Views",
+            "description": "The number of times your post was played or displayed.",
+            "id": "18022958867898532/insights/views/lifetime"
+          }
+        ],
+        "likes": [
+          {
+            "name": "likes",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Likes",
+            "description": "The number of likes on your post.",
+            "id": "18022958867898532/insights/likes/lifetime"
+          }
+        ],
+        "comments": [
+          {
+            "name": "comments",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Comments",
+            "description": "The number of comments on your post.",
+            "id": "18022958867898532/insights/comments/lifetime"
+          }
+        ],
+        "shares": [
+          {
+            "name": "shares",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Shares",
+            "description": "The number of shares of your post.",
+            "id": "18022958867898532/insights/shares/lifetime"
+          }
+        ],
+        "saved": [
+          {
+            "name": "saved",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Saved",
+            "description": "The number of saves of your post.",
+            "id": "18022958867898532/insights/saved/lifetime"
+          }
+        ],
+        "total_interactions": [
+          {
+            "name": "total_interactions",
+            "period": "lifetime",
+            "values": [
+              {
+                "value": 0
+              }
+            ],
+            "title": "Post interactions",
+            "description": "The number of likes, saves, comments and shares on your post minus the number of unlikes, unsaves and deleted comments.",
+            "id": "18022958867898532/insights/total_interactions/lifetime"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": []
+}
