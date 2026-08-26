@@ -1,0 +1,30 @@
+name: Fix Kairon Reel Feed Placement
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-kairon-reel-feed.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Keep Kairon Reels out of profile feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE='.github/workflows/kairon-daily-premium-reel.yml'
+          sed -i "s/share_to_feed=true/share_to_feed=false/g; s/share_to_feed='true'/share_to_feed='false'/g" "$FILE"
+          grep -q 'share_to_feed=false' "$FILE"
+          git config user.name 'Kairon Auto Social'
+          git config user.email 'kaironlabsstudio@gmail.com'
+          git add "$FILE"
+          git commit -m 'Keep Kairon Reels out of profile feed' || true
+          git push origin HEAD:main
