@@ -21,7 +21,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          echo 'Catch-up recovery: 2026-08-27 POST + REEL'
+          echo 'Catch-up recovery: 2026-08-27 21:11 Europe/Rome POST + REEL'
           for WF in kairon-daily-premium-post.yml kairon-daily-premium-reel.yml; do
             code=$(curl -sS -o /tmp/dispatch.json -w '%{http_code}' \
               -X POST "https://api.github.com/repos/$REPO/actions/workflows/$WF/dispatches" \
