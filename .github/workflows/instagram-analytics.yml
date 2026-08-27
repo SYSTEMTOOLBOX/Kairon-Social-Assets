@@ -170,3 +170,5 @@ jobs:
           git commit -m "Update Kairon Instagram analytics $(TZ=Europe/Rome date '+%F')" || exit 0
           git pull --rebase
           git push origin HEAD:main
+
+# analytics refresh trigger 2026-08-27 07:18 Europe/Rome
