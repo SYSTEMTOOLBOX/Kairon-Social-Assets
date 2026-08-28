@@ -22,30 +22,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
+        with: {fetch-depth: 0}
       - name: Gate 23:50 Europe Rome or manual/push
         id: gate
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${GITHUB_EVENT_NAME}" != 'schedule' ]; then
-            echo 'run=true' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          HOUR=$(TZ=Europe/Rome date '+%H')
-          if [ "$HOUR" = '23' ]; then
-            echo 'run=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'run=false' >> "$GITHUB_OUTPUT"
-          fi
-
+          if [ "${GITHUB_EVENT_NAME}" != 'schedule' ]; then echo 'run=true' >> "$GITHUB_OUTPUT"; exit 0; fi
+          HOUR=$(TZ=Europe/Rome date '+%H'); if [ "$HOUR" = '23' ]; then echo 'run=true' >> "$GITHUB_OUTPUT"; else echo 'run=false' >> "$GITHUB_OUTPUT"; fi
       - name: Update checkout before snapshot
         if: steps.gate.outputs.run == 'true'
         shell: bash
         run: git pull --rebase
-
       - name: Collect Instagram analytics snapshot
         if: steps.gate.outputs.run == 'true'
         env:
@@ -53,122 +41,60 @@ jobs:
           EXPECTED_USERNAME: kaironlabsstudio
         shell: bash
         run: |
-          set -euo pipefail
-          test -n "$TOKEN"
-          mkdir -p analytics
+          set -euo pipefail; test -n "$TOKEN"; mkdir -p analytics
           python - <<'PY'
-          import os, json, datetime, urllib.parse, urllib.request, urllib.error
-
-          token = os.environ['TOKEN']
-          expected = os.environ['EXPECTED_USERNAME']
-          base = 'https://graph.instagram.com'
-
-          def api(path, params=None):
-              params = params or {}
-              url = base + path
-              if params:
-                  url += '?' + urllib.parse.urlencode(params)
-              req = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + token})
+          import os,json,datetime,urllib.parse,urllib.request,urllib.error
+          token=os.environ['TOKEN']; expected=os.environ['EXPECTED_USERNAME']; base='https://graph.instagram.com'
+          def api(path,params=None):
+              params=params or {}; url=base+path+('?' + urllib.parse.urlencode(params) if params else '')
               try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      return {'ok': True, 'status': r.status, 'data': json.loads(r.read().decode('utf-8'))}
+                  with urllib.request.urlopen(urllib.request.Request(url,headers={'Authorization':'Bearer '+token}),timeout=30) as r:return {'ok':True,'status':r.status,'data':json.loads(r.read().decode())}
               except urllib.error.HTTPError as e:
-                  raw = e.read().decode('utf-8', 'replace')
-                  try: body = json.loads(raw)
-                  except Exception: body = {'raw': raw[:1000]}
-                  return {'ok': False, 'status': e.code, 'error': body}
-              except Exception as e:
-                  return {'ok': False, 'status': None, 'error': {'message': str(e)}}
-
-          now_utc = datetime.datetime.now(datetime.timezone.utc)
+                  raw=e.read().decode('utf-8','replace')
+                  try: body=json.loads(raw)
+                  except: body={'raw':raw[:1000]}
+                  return {'ok':False,'status':e.code,'error':body}
+              except Exception as e:return {'ok':False,'status':None,'error':{'message':str(e)}}
+          now=datetime.datetime.now(datetime.timezone.utc)
           try:
-              from zoneinfo import ZoneInfo
-              local = now_utc.astimezone(ZoneInfo('Europe/Rome'))
-          except Exception:
-              local = now_utc
-          day = local.strftime('%Y-%m-%d')
-
-          out = {
-              'schema': 1,
-              'account': expected,
-              'checked_at_utc': now_utc.isoformat(),
-              'local_date': day,
-              'profile': {},
-              'account_insights': {},
-              'recent_media': [],
-              'errors': []
-          }
-
-          me = api('/me', {'fields': 'id,username'})
-          if not me['ok']:
-              out['errors'].append({'stage': 'me', **me})
+              from zoneinfo import ZoneInfo; local=now.astimezone(ZoneInfo('Europe/Rome'))
+          except: local=now
+          day=local.strftime('%Y-%m-%d'); out={'schema':1,'account':expected,'checked_at_utc':now.isoformat(),'local_date':day,'profile':{},'account_insights':{},'recent_media':[],'errors':[]}
+          me=api('/me',{'fields':'id,username'})
+          if not me['ok']: out['errors'].append({'stage':'me',**me})
           else:
-              profile = me['data']
-              out['profile'].update(profile)
-              if profile.get('username') != expected:
-                  out['errors'].append({'stage': 'username_check', 'expected': expected, 'actual': profile.get('username')})
-              ig = profile.get('id')
-
-              for field in ['followers_count', 'follower_count', 'media_count']:
-                  res = api('/me', {'fields': 'id,username,' + field})
-                  if res['ok'] and field in res['data']:
-                      out['profile'][field] = res['data'][field]
-
-              account_metrics = [
-                  'reach','profile_views','views','accounts_engaged','total_interactions',
-                  'likes','comments','shares','saves','follower_count','follows_and_unfollows',
-                  'profile_links_taps'
-              ]
-              if ig:
-                  for metric in account_metrics:
-                      res = api('/' + ig + '/insights', {'metric': metric, 'period': 'day'})
-                      if res['ok']:
-                          out['account_insights'][metric] = res['data'].get('data', [])
-                      else:
-                          out['account_insights'][metric] = {'unavailable': True, 'status': res['status']}
-
-              media = api('/me/media', {'fields': 'id,caption,media_type,media_product_type,permalink,timestamp', 'limit': 25})
-              if not media['ok']:
-                  out['errors'].append({'stage': 'media_list', **media})
-              else:
-                  metric_names = ['reach','views','likes','comments','shares','saved','total_interactions']
-                  reel_metrics = ['ig_reels_avg_watch_time','ig_reels_video_view_total_time','reels_skip_rate']
-                  for item in media['data'].get('data', []):
-                      row = dict(item)
-                      row['basic_counts'] = {}
-                      row['insights'] = {}
-                      counts = api('/' + item['id'], {'fields': 'like_count,comments_count'})
-                      if counts['ok']:
+              out['profile'].update(me['data']); ig=me['data'].get('id')
+              if me['data'].get('username')!=expected: out['errors'].append({'stage':'username_check','expected':expected,'actual':me['data'].get('username')})
+              for field in ['followers_count','follower_count','media_count']:
+                  r=api('/me',{'fields':'id,username,'+field})
+                  if r['ok'] and field in r['data']: out['profile'][field]=r['data'][field]
+              for m in ['reach','profile_views','views','accounts_engaged','total_interactions','likes','comments','shares','saves','follower_count','follows_and_unfollows','profile_links_taps']:
+                  r=api('/'+ig+'/insights',{'metric':m,'period':'day'}); out['account_insights'][m]=r['data'].get('data',[]) if r['ok'] else {'unavailable':True,'status':r['status']}
+              media=api('/me/media',{'fields':'id,caption,media_type,media_product_type,permalink,timestamp','limit':25})
+              if media['ok']:
+                  for item in media['data'].get('data',[]):
+                      row=dict(item); row['basic_counts']={}; row['insights']={}; c=api('/'+item['id'],{'fields':'like_count,comments_count'})
+                      if c['ok']:
                           for k in ['like_count','comments_count']:
-                              if k in counts['data']: row['basic_counts'][k] = counts['data'][k]
-                      metrics = list(metric_names)
-                      if item.get('media_type') == 'VIDEO' or item.get('media_product_type') == 'REELS':
-                          metrics += reel_metrics
-                      for metric in metrics:
-                          res = api('/' + item['id'] + '/insights', {'metric': metric})
-                          if res['ok']:
-                              data = res['data'].get('data', [])
-                              if data:
-                                  row['insights'][metric] = data
+                              if k in c['data']: row['basic_counts'][k]=c['data'][k]
+                      metrics=['reach','views','likes','comments','shares','saved','total_interactions']
+                      if item.get('media_type')=='VIDEO' or item.get('media_product_type')=='REELS': metrics+=['ig_reels_avg_watch_time','ig_reels_video_view_total_time','reels_skip_rate']
+                      for m in metrics:
+                          r=api('/'+item['id']+'/insights',{'metric':m})
+                          if r['ok'] and r['data'].get('data'): row['insights'][m]=r['data']['data']
                       out['recent_media'].append(row)
-
-          with open('analytics/latest.json', 'w', encoding='utf-8') as f:
-              json.dump(out, f, ensure_ascii=False, indent=2)
-          with open(f'analytics/{day}.json', 'w', encoding='utf-8') as f:
-              json.dump(out, f, ensure_ascii=False, indent=2)
-          print(json.dumps({'account': expected, 'date': day, 'media': len(out['recent_media']), 'errors': len(out['errors'])}))
+              else: out['errors'].append({'stage':'media_list',**media})
+          for p in ['analytics/latest.json',f'analytics/{day}.json']:
+              with open(p,'w',encoding='utf-8') as f: json.dump(out,f,ensure_ascii=False,indent=2)
+          print(json.dumps({'account':expected,'date':day,'media':len(out['recent_media']),'errors':len(out['errors'])}))
           PY
-
       - name: Save analytics history
         if: steps.gate.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name 'Kairon Analytics'
-          git config user.email 'kairon-analytics@users.noreply.github.com'
-          git add analytics
-          git commit -m "Update Kairon Instagram analytics $(TZ=Europe/Rome date '+%F')" || exit 0
-          git pull --rebase
-          git push origin HEAD:main
+          git config user.name 'Kairon Analytics'; git config user.email 'kairon-analytics@users.noreply.github.com'
+          git add analytics; git commit -m "Update Kairon Instagram analytics $(TZ=Europe/Rome date '+%F')" || exit 0
+          git pull --rebase; git push origin HEAD:main
 
-# analytics refresh trigger 2026-08-27 07:18 Europe/Rome
+# analytics refresh trigger 2026-08-28 03:10 Europe/Rome
