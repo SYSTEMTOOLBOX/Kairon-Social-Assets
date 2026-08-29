@@ -24,6 +24,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          echo 'Kairon reel watchdog safe retry 2026-08-29'
           if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ] || [ "${GITHUB_EVENT_NAME}" = 'push' ]; then
             SHOULD=true
           else
