@@ -1,0 +1,120 @@
+name: Kairon One Shot Fix Delayed Schedule Gates
+
+on:
+  push:
+    paths:
+      - '.github/workflows/kairon-fix-delayed-schedule-gates.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch delayed schedule gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          fixes = {
+              Path('.github/workflows/kairon-daily-premium-post.yml'): (
+          '''      - name: Gate 18:00 Europe Rome or manual
+                  id: gate
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    SHOULD=false
+                    if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+                      SHOULD=true
+                    else
+                      HOUR=$(TZ=Europe/Rome date +%H)
+                      echo "Europe/Rome hour: $HOUR"
+                      if [ "$HOUR" = '18' ]; then SHOULD=true; fi
+                    fi
+                    echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
+          ''',
+          '''      - name: Gate correct Rome Post schedule or manual
+                  id: gate
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    SHOULD=false
+                    if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+                      SHOULD=true
+                    else
+                      OFFSET=$(TZ=Europe/Rome date +%z)
+                      SCHEDULE=$(jq -r '.schedule // ""' "$GITHUB_EVENT_PATH")
+                      echo "Europe/Rome UTC offset: $OFFSET"
+                      echo "Scheduled cron: $SCHEDULE"
+                      if [ "$OFFSET" = '+0200' ] && [ "$SCHEDULE" = '0 16 * * *' ]; then
+                        SHOULD=true
+                      elif [ "$OFFSET" = '+0100' ] && [ "$SCHEDULE" = '0 17 * * *' ]; then
+                        SHOULD=true
+                      fi
+                    fi
+                    echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
+          '''),
+              Path('.github/workflows/kairon-daily-premium-reel.yml'): (
+          '''      - name: Gate 19 Europe Rome or manual
+                  id: gate
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    SHOULD=false
+                    if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+                      SHOULD=true
+                    else
+                      HOUR=$(TZ=Europe/Rome date +%H)
+                      echo "Europe/Rome hour: $HOUR"
+                      if [ "$HOUR" = '19' ]; then SHOULD=true; fi
+                    fi
+                    echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
+          ''',
+          '''      - name: Gate correct Rome Reel schedule or manual
+                  id: gate
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    SHOULD=false
+                    if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+                      SHOULD=true
+                    else
+                      OFFSET=$(TZ=Europe/Rome date +%z)
+                      SCHEDULE=$(jq -r '.schedule // ""' "$GITHUB_EVENT_PATH")
+                      echo "Europe/Rome UTC offset: $OFFSET"
+                      echo "Scheduled cron: $SCHEDULE"
+                      if [ "$OFFSET" = '+0200' ] && [ "$SCHEDULE" = '0 17 * * *' ]; then
+                        SHOULD=true
+                      elif [ "$OFFSET" = '+0100' ] && [ "$SCHEDULE" = '0 18 * * *' ]; then
+                        SHOULD=true
+                      fi
+                    fi
+                    echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
+          ''')
+          }
+
+          for path, (old, new) in fixes.items():
+              text = path.read_text()
+              if old not in text:
+                  raise SystemExit(f'Expected old gate not found in {path}')
+              path.write_text(text.replace(old, new, 1))
+              print(f'Patched {path}')
+          PY
+
+      - name: Commit fix and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/kairon-fix-delayed-schedule-gates.yml
+          git config user.name 'Kairon Auto Social'
+          git config user.email 'kaironlabsstudio@gmail.com'
+          git add .github/workflows/kairon-daily-premium-post.yml .github/workflows/kairon-daily-premium-reel.yml .github/workflows/kairon-fix-delayed-schedule-gates.yml
+          git commit -m 'Fix Kairon delayed schedule gate logic'
+          git push origin HEAD:main
