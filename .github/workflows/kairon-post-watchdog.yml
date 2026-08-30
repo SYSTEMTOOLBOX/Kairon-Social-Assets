@@ -5,6 +5,9 @@ on:
     - cron: '10,20,30,40,50 16 * * *'
     - cron: '10,20,30,40,50 17 * * *'
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/kairon-post-watchdog.yml'
 
 permissions:
   actions: write
@@ -21,7 +24,8 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
+          echo 'Kairon post watchdog manual publish 2026-08-30'
+          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ] || [ "${GITHUB_EVENT_NAME}" = 'push' ]; then
             SHOULD=true
           else
             HOUR=$(TZ=Europe/Rome date +%H)
