@@ -1,13 +1,10 @@
-name: Kairon Post 18 Watchdog
+name: Kairon Post 18:10 Watchdog
 
 on:
   schedule:
-    - cron: '10,20,30,40,50 16 * * *'
-    - cron: '10,20,30,40,50 17 * * *'
+    - cron: '10 16 * * *'
+    - cron: '10 17 * * *'
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/kairon-post-watchdog.yml'
 
 permissions:
   actions: write
@@ -17,23 +14,33 @@ jobs:
   fallback:
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch Post fallback in Europe Rome 18 hour
+      - name: Dispatch Post fallback for the correct Rome schedule
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
-          echo 'Kairon post watchdog manual publish 2026-08-30'
-          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ] || [ "${GITHUB_EVENT_NAME}" = 'push' ]; then
+          SHOULD=false
+
+          if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
             SHOULD=true
           else
-            HOUR=$(TZ=Europe/Rome date +%H)
-            SHOULD=false
-            if [ "$HOUR" = '18' ]; then SHOULD=true; fi
+            OFFSET=$(TZ=Europe/Rome date +%z)
+            echo "Europe/Rome UTC offset: $OFFSET"
+            echo "Scheduled cron: $SCHEDULE"
+
+            if [ "$OFFSET" = '+0200' ] && [ "$SCHEDULE" = '10 16 * * *' ]; then
+              SHOULD=true
+            elif [ "$OFFSET" = '+0100' ] && [ "$SCHEDULE" = '10 17 * * *' ]; then
+              SHOULD=true
+            fi
           fi
+
           echo "post_fallback_should_run=$SHOULD"
           if [ "$SHOULD" != 'true' ]; then exit 0; fi
+
           code=$(curl -sS -o /tmp/dispatch.json -w '%{http_code}' \
             -X POST "https://api.github.com/repos/$REPO/actions/workflows/kairon-daily-premium-post.yml/dispatches" \
             -H "Authorization: Bearer $GH_TOKEN" \
