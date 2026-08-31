@@ -18,22 +18,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Gate 18:00 Europe Rome or manual
+      - name: Gate correct Rome Post schedule or manual
         id: gate
         shell: bash
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
           SHOULD=false
           if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
             SHOULD=true
           else
-            HOUR=$(TZ=Europe/Rome date +%H)
-            echo "Europe/Rome hour: $HOUR"
-            if [ "$HOUR" = '18' ]; then SHOULD=true; fi
+            OFFSET=$(TZ=Europe/Rome date +%z)
+            echo "Europe/Rome UTC offset: $OFFSET"
+            echo "Scheduled cron: $SCHEDULE"
+            if [ "$OFFSET" = '+0200' ] && [ "$SCHEDULE" = '0 16 * * *' ]; then
+              SHOULD=true
+            elif [ "$OFFSET" = '+0100' ] && [ "$SCHEDULE" = '0 17 * * *' ]; then
+              SHOULD=true
+            fi
           fi
           echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
 
@@ -65,6 +72,7 @@ jobs:
             git add approved/week
             if ! git diff --cached --quiet; then
               git commit -m 'Install approved native 4x5 weekly post assets'
+              git pull --rebase origin main
               git push origin HEAD:main
             fi
           fi
@@ -216,6 +224,7 @@ jobs:
           set -euo pipefail
           git config user.name 'Kairon Auto Social'
           git config user.email 'kaironlabsstudio@gmail.com'
+          git pull --rebase origin main
           NEXT=$(( (IDX + 1) % 7 ))
           printf '%s\n' "$NEXT" > state/premium_post_index.txt
           TZ=Europe/Rome date +%F > state/premium_post_last_date.txt
