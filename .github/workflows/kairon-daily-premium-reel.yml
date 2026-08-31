@@ -18,22 +18,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Gate 19 Europe Rome or manual
+      - name: Gate correct Rome Reel schedule or manual
         id: gate
         shell: bash
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
           SHOULD=false
           if [ "${GITHUB_EVENT_NAME}" = 'workflow_dispatch' ]; then
             SHOULD=true
           else
-            HOUR=$(TZ=Europe/Rome date +%H)
-            echo "Europe/Rome hour: $HOUR"
-            if [ "$HOUR" = '19' ]; then SHOULD=true; fi
+            OFFSET=$(TZ=Europe/Rome date +%z)
+            echo "Europe/Rome UTC offset: $OFFSET"
+            echo "Scheduled cron: $SCHEDULE"
+            if [ "$OFFSET" = '+0200' ] && [ "$SCHEDULE" = '0 17 * * *' ]; then
+              SHOULD=true
+            elif [ "$OFFSET" = '+0100' ] && [ "$SCHEDULE" = '0 18 * * *' ]; then
+              SHOULD=true
+            fi
           fi
           echo "should_publish=$SHOULD" >> "$GITHUB_OUTPUT"
 
@@ -221,6 +228,7 @@ jobs:
           git config user.email 'kaironlabsstudio@gmail.com'
           git add generated/premium-reel-current.mp4
           git commit -m "Render native Kairon Reel ${{ steps.pick.outputs.title }}" || true
+          git pull --rebase origin main
           git push origin HEAD:main
           SHA=$(git rev-parse HEAD)
           URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${SHA}/generated/premium-reel-current.mp4"
@@ -297,7 +305,7 @@ jobs:
           set -euo pipefail
           git config user.name 'Kairon Auto Social'
           git config user.email 'kaironlabsstudio@gmail.com'
-          git pull --rebase
+          git pull --rebase origin main
           NEXT=$(( (IDX + 1) % 7 ))
           printf '%s\n' "$NEXT" > state/premium_reel_index.txt
           TZ=Europe/Rome date +%F > state/premium_reel_last_date.txt
