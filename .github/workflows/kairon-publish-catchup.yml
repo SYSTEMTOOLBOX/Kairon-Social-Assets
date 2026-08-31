@@ -38,3 +38,5 @@ jobs:
           dispatch kairon-daily-premium-post.yml
           sleep 90
           dispatch kairon-daily-premium-reel.yml
+
+# manual catch-up kick 2026-08-31 22:04 Europe/Rome
